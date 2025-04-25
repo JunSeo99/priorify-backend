@@ -1,4 +1,4 @@
-package com.dku.priorify.security;
+package com.dku.opensource.priorify.priorify_backend.security;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,11 +9,13 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.util.AntPathMatcher;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
@@ -22,9 +24,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
         String token = resolveToken(request);
-        
+
         try {
             if (token != null && jwtTokenProvider.validateToken(token)) {
                 Authentication auth = jwtTokenProvider.getAuthentication(token);
@@ -37,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT token");
             return;
         }
-        
+
         filterChain.doFilter(request, response);
     }
 
@@ -48,4 +49,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         return null;
     }
-} 
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+
+        return pathMatcher.match("/api/auth/**", path) ||
+               pathMatcher.match("/swagger-ui/**", path) ||
+               pathMatcher.match("/v3/api-docs/**", path) ||
+               pathMatcher.match("/error", path);
+    }
+}

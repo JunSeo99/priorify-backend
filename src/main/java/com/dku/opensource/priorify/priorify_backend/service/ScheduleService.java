@@ -1,7 +1,7 @@
-package com.dku.priorify.service;
+package com.dku.opensource.priorify.priorify_backend.service;
 
-import com.dku.priorify.model.Schedule;
-import com.dku.priorify.model.User;
+import com.dku.opensource.priorify.priorify_backend.model.Schedule;
+import com.dku.opensource.priorify.priorify_backend.model.User;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;

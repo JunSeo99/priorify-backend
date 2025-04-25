@@ -1,9 +1,8 @@
-package com.dku.priorify.controller;
+package com.dku.opensource.priorify.priorify_backend.controller;
 
-import com.dku.priorify.model.CategoryPriority;
-import com.dku.priorify.service.PriorityService;
+import com.dku.opensource.priorify.priorify_backend.service.PriorityService;
+import com.dku.opensource.priorify.priorify_backend.model.CategoryPriority;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.bson.types.ObjectId;
 

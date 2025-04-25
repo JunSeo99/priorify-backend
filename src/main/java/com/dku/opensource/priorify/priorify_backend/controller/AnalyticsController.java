@@ -1,11 +1,11 @@
-package com.dku.priorify.controller;
+package com.dku.opensource.priorify.priorify_backend.controller;
 
-import com.dku.priorify.service.AnalyticsService;
+import com.dku.opensource.priorify.priorify_backend.service.AnalyticsService;
 
+import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -13,6 +13,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/analytics")
 public class AnalyticsController {

@@ -1,7 +1,7 @@
-package com.dku.priorify.controller;
+package com.dku.opensource.priorify.priorify_backend.controller;
 
-import com.dku.priorify.model.User;
-import com.dku.priorify.service.UserService;
+import com.dku.opensource.priorify.priorify_backend.service.UserService;
+import com.dku.opensource.priorify.priorify_backend.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

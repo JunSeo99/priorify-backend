@@ -1,5 +1,6 @@
-package com.dku.priorify.security;
+package com.dku.opensource.priorify.priorify_backend.security;
 
+import com.dku.opensource.priorify.priorify_backend.service.UserService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
@@ -8,8 +9,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import com.dku.priorify.model.User;
-import com.dku.priorify.service.UserService;
+import com.dku.opensource.priorify.priorify_backend.model.User;
+import org.bson.types.ObjectId;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -42,8 +43,21 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
         return Jwts.builder()
-                .setSubject(userDetails.getUsername())
-                .claim("userId", user.getId().toString())
+                .setSubject(user.getId().toString())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+
+    public String generateToken(String name) {
+        User user = userService.findByName(name);
+        
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+                .setSubject(user.getId().toString())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key)
@@ -57,7 +71,10 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
-        return claims.getSubject();
+        String userId = claims.getSubject();
+        User user = userService.findById(new ObjectId(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return user.getName();
     }
 
     public String getUserIdFromToken(String token) {
@@ -67,7 +84,7 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
-        return claims.get("userId", String.class);
+        return claims.getSubject();
     }
 
     public boolean validateToken(String token) {

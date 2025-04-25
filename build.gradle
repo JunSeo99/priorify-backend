@@ -1,7 +1,8 @@
 plugins {
+	id 'application'
 	id 'java'
-	id 'org.springframework.boot' version '3.4.4'
-	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.springframework.boot' version '2.7.0'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 
 group = 'com.dku.opensource.priorify'
@@ -9,7 +10,7 @@ version = '1.0.0-SNAPSHOT'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(11)
 	}
 }
 
@@ -25,6 +26,7 @@ repositories {
 
 dependencies {
 	// Spring Boot Starters
+	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'

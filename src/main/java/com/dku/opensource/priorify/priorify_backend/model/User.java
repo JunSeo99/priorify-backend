@@ -1,4 +1,4 @@
-package com.dku.priorify.model;
+package com.dku.opensource.priorify.priorify_backend.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -14,10 +14,7 @@ public class User {
     
     @Indexed(unique = true)
     private String name;
-    
     private String password;
-    private String email;
-    private String profileImage;
     private List<CategoryPriority> highPriorities;
     private List<CategoryPriority> lowPriorities;
     
@@ -25,10 +22,9 @@ public class User {
     public User() {}
     
     // 생성자
-    public User(String name, String password, String email) {
+    public User(String name, String password) {
         this.name = name;
         this.password = password;
-        this.email = email;
     }
     
     // Getters and Setters
@@ -38,14 +34,6 @@ public class User {
     
     public void setId(ObjectId id) {
         this.id = id;
-    }
-    
-    public String getEmail() {
-        return email;
-    }
-    
-    public void setEmail(String email) {
-        this.email = email;
     }
     
     public String getPassword() {
@@ -64,13 +52,6 @@ public class User {
         this.name = name;
     }
     
-    public String getProfileImage() {
-        return profileImage;
-    }
-    
-    public void setProfileImage(String profileImage) {
-        this.profileImage = profileImage;
-    }
 
     public List<CategoryPriority> getHighPriorities() {
         return highPriorities;

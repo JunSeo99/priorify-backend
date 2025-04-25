@@ -1,4 +1,4 @@
-package com.dku.priorify.model;
+package com.dku.opensource.priorify.priorify_backend.model;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 

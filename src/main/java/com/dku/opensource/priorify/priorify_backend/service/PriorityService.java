@@ -1,7 +1,7 @@
-package com.dku.priorify.service;
+package com.dku.opensource.priorify.priorify_backend.service;
 
-import com.dku.priorify.model.CategoryPriority;
-import com.dku.priorify.model.User;
+import com.dku.opensource.priorify.priorify_backend.model.CategoryPriority;
+import com.dku.opensource.priorify.priorify_backend.model.User;
 import org.springframework.stereotype.Service;
 import org.bson.types.ObjectId;
 import java.util.List;
