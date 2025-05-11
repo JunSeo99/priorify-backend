@@ -8,4 +8,5 @@ import org.bson.types.ObjectId;
 @Service
 public interface UserService extends MongoRepository<User, ObjectId> {
     User findByName(String name);
+    User findByGoogleId(String googleId);
 } 

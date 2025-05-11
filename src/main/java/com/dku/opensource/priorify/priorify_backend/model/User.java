@@ -15,6 +15,11 @@ public class User {
     @Indexed(unique = true)
     private String name;
     private String password;
+    
+    private String googleId;
+    private String email;
+    private String displayName;
+    
     private List<CategoryPriority> highPriorities;
     private List<CategoryPriority> lowPriorities;
     
@@ -52,19 +57,43 @@ public class User {
         this.name = name;
     }
     
-
+    public String getGoogleId() {
+        return googleId;
+    }
+    
+    public void setGoogleId(String googleId) {
+        this.googleId = googleId;
+    }
+    
+    public String getEmail() {
+        return email;
+    }
+    
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
+    public String getDisplayName() {
+        return displayName;
+    }
+    
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+    
+    
     public List<CategoryPriority> getHighPriorities() {
         return highPriorities;
     }
-
+    
     public void setHighPriorities(List<CategoryPriority> highPriorities) {
         this.highPriorities = highPriorities;
     }
-
+    
     public List<CategoryPriority> getLowPriorities() {
         return lowPriorities;
     }
-
+    
     public void setLowPriorities(List<CategoryPriority> lowPriorities) {
         this.lowPriorities = lowPriorities;
     }
