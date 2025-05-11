@@ -1,6 +1,5 @@
 ## Priorify Backend
 
-[![License](https://img.shields.io/badge/license-MIT-blue)]()
 [![Backend](https://img.shields.io/badge/service-backend-green)]()
 
 ---
@@ -63,21 +62,3 @@ Priorify는 사용자가 작업을 간편하게 우선순위화할 수 있도록
 3. Open Pull Request
 4. Code review & merge into develop
 5. Merge develop into main
-
----
-
-### 📥 시작하기
-
-1. 저장소 클론:
-
-   ```bash
-   git clone https://github.com/JunSeo99/priorify-backend.git
-   ```
-2. `application.properties`에 MongoDB URI 및 LLaMA API credentials 설정
-3. 빌드 및 실행:
-
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-
----
