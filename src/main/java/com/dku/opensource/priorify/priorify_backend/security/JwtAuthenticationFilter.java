@@ -24,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        String path = request.getRequestURI();
         String token = resolveToken(request);
 
         try {
@@ -52,11 +53,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-
-        return pathMatcher.match("/api/auth/**", path) ||
-               pathMatcher.match("/swagger-ui/**", path) ||
-               pathMatcher.match("/v3/api-docs/**", path) ||
-               pathMatcher.match("/error", path);
+        String path = request.getServletPath();
+        // 로그인/회원가입, 에러 및 Swagger 관련 경로는 필터 적용 안 함
+        return pathMatcher.match("/api/auth/**", path)
+                || pathMatcher.match("/error", path)
+                || pathMatcher.match("/swagger-ui/**", path)
+                || pathMatcher.match("/v3/api-docs/**", path);
     }
 }

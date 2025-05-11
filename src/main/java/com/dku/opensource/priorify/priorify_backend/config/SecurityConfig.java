@@ -10,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +31,17 @@ public class SecurityConfig {
      private final JwtAuthenticationFilter jwtAuthenticationFilter;
      private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
+     @Bean
+     public WebSecurityCustomizer webSecurityCustomizer() {
+         return web -> web.ignoring()
+             .antMatchers(
+                 "/api/auth/**",
+                 "/error",
+                 "/swagger-ui/**",
+                 "/v3/api-docs/**"
+             );
+     }
+     
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
@@ -43,12 +55,17 @@ public class SecurityConfig {
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 .and()
                 .authorizeRequests()
-                .antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/v2/api-docs", "/configuration/ui",
-                        "/swagger-resources", "/configuration/security",
-                        "/swagger-ui.html", "/webjars/**", "/swagger-ui.html",
-                        "/swagger-resources/configuration/ui",
-                        "/swagger-resources/configuration/security").permitAll()
+                // 인증이 필요 없는 엔드포인트들
+                .antMatchers(
+                    "/api/auth/**",
+                    "/error",
+                    "/swagger-ui/**", "/v3/api-docs/**",
+                    "/v2/api-docs", "/configuration/ui",
+                    "/swagger-resources", "/configuration/security",
+                    "/swagger-ui.html", "/webjars/**",
+                    "/swagger-resources/configuration/ui",
+                    "/swagger-resources/configuration/security"
+                ).permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
