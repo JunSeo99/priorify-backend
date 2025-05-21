@@ -27,7 +27,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @Valid @RequestBody Schedule schedule) {
         String userId = (String) request.getAttribute("userId");
-        Schedule createdSchedule = scheduleService.createSchedule(new ObjectId(userId), schedule);
+        Schedule createdSchedule = scheduleService.createSchedule(userId, schedule);
         return ResponseEntity.ok(createdSchedule);
     }
 
@@ -37,7 +37,7 @@ public class ScheduleController {
             @PathVariable String scheduleId,
             @Valid @RequestBody Schedule schedule) {
         String userId = (String) request.getAttribute("userId");
-        Schedule updatedSchedule = scheduleService.updateSchedule(new ObjectId(userId), scheduleId, schedule);
+        Schedule updatedSchedule = scheduleService.updateSchedule(userId, scheduleId, schedule);
         return ResponseEntity.ok(updatedSchedule);
     }
 
@@ -46,7 +46,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        scheduleService.deleteSchedule(new ObjectId(userId), scheduleId);
+        scheduleService.deleteSchedule(userId, scheduleId);
         return ResponseEntity.ok("일정이 삭제되었습니다.");
     }
 
@@ -55,7 +55,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        Schedule schedule = scheduleService.findScheduleByIdAndUser(scheduleId, new ObjectId(userId));
+        Schedule schedule = scheduleService.findScheduleByIdAndUser(scheduleId, userId);
         if (schedule == null) {
             return ResponseEntity.notFound().build();
         }
@@ -65,7 +65,7 @@ public class ScheduleController {
     @GetMapping
     public ResponseEntity<List<Schedule>> getAllSchedules(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        List<Schedule> schedules = scheduleService.findAllSchedulesByUser(new ObjectId(userId));
+        List<Schedule> schedules = scheduleService.findAllSchedulesByUser(userId);
         return ResponseEntity.ok(schedules);
     }
 
@@ -84,7 +84,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        scheduleService.toggleScheduleCompletion(new ObjectId(userId), scheduleId);
+        scheduleService.toggleScheduleStatus(userId, scheduleId);
         return ResponseEntity.ok("일정 완료 상태가 변경되었습니다.");
     }
 } 

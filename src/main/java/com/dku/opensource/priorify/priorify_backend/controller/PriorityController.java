@@ -41,12 +41,12 @@ public class PriorityController {
     @GetMapping("/high")
     public ResponseEntity<List<CategoryPriority>> getHighPriorities(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        return ResponseEntity.ok(priorityService.getHighPriorities(new ObjectId(userId)));
+        return ResponseEntity.ok(priorityService.getHighPriorities(userId));
     }
 
     @GetMapping("/low")
     public ResponseEntity<List<CategoryPriority>> getLowPriorities(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        return ResponseEntity.ok(priorityService.getLowPriorities(new ObjectId(userId)));
+        return ResponseEntity.ok(priorityService.getLowPriorities(userId));
     }
 } 

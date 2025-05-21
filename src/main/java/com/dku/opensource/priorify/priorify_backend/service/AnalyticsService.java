@@ -35,20 +35,25 @@ public class AnalyticsService {
         Map<String, Double> completionRate = schedules.stream()
                 .collect(Collectors.groupingBy(Schedule::getCategory,
                         Collectors.collectingAndThen(
-                                Collectors.partitioningBy(Schedule::isCompleted, Collectors.counting()),
-                                map -> (double) map.get(true) / (map.get(true) + map.get(false))
+                                Collectors.partitioningBy(s -> "completed".equals(s.getStatus()), Collectors.counting()),
+                                map -> {
+                                    long completed = map.get(true);
+                                    long total = completed + map.get(false);
+                                    return total > 0 ? (double) completed / total : 0.0;
+                                }
                         )));
         analytics.put("completionRate", completionRate);
         
-        // 카테고리별 평균 우선순위 점수
+        // 카테고리별 평균 우선순위 점수 (첫 번째 우선순위 벡터 요소 사용)
         Map<String, Double> avgPriorityScore = schedules.stream()
+                .filter(s -> s.getPriorityVector() != null && !s.getPriorityVector().isEmpty())
                 .collect(Collectors.groupingBy(Schedule::getCategory,
-                        Collectors.averagingDouble(Schedule::getPriorityScore)));
+                        Collectors.averagingDouble(s -> s.getPriorityVector().get(0))));
         analytics.put("avgPriorityScore", avgPriorityScore);
 
         // 시간대별 일정 분포
         Map<Integer, Long> hourlyDistribution = schedules.stream()
-                .collect(Collectors.groupingBy(s -> s.getDatetime().getHour(), Collectors.counting()));
+                .collect(Collectors.groupingBy(s -> s.getStartAt().getHour(), Collectors.counting()));
         analytics.put("hourlyDistribution", hourlyDistribution);
 
         return analytics;
@@ -61,7 +66,7 @@ public class AnalyticsService {
         
         // 전체 완료율
         long totalSchedules = schedules.size();
-        long completedSchedules = schedules.stream().filter(Schedule::isCompleted).count();
+        long completedSchedules = schedules.stream().filter(s -> "completed".equals(s.getStatus())).count();
         double overallCompletionRate = totalSchedules > 0 ? (double) completedSchedules / totalSchedules : 0;
         metrics.put("overallCompletionRate", overallCompletionRate);
         
@@ -72,9 +77,10 @@ public class AnalyticsService {
         priorityCompletionRate.put("low", calculateCompletionRateByPriority(schedules, 0.0, 0.4));
         metrics.put("priorityCompletionRate", priorityCompletionRate);
         
-        // 생산성 점수 (완료율과 우선순위 점수의 가중 평균)
+        // 생산성 점수 (완료된 일정의 평균 우선순위 점수)
         double productivityScore = schedules.stream()
-                .mapToDouble(s -> s.isCompleted() ? s.getPriorityScore() : 0)
+                .filter(s -> "completed".equals(s.getStatus()) && s.getPriorityVector() != null && !s.getPriorityVector().isEmpty())
+                .mapToDouble(s -> s.getPriorityVector().get(0))
                 .average()
                 .orElse(0.0);
         metrics.put("productivityScore", productivityScore);
@@ -84,14 +90,18 @@ public class AnalyticsService {
 
     private double calculateCompletionRateByPriority(List<Schedule> schedules, double minScore, double maxScore) {
         List<Schedule> prioritySchedules = schedules.stream()
-                .filter(s -> s.getPriorityScore() >= minScore && s.getPriorityScore() < maxScore)
+                .filter(s -> s.getPriorityVector() != null && !s.getPriorityVector().isEmpty())
+                .filter(s -> {
+                    double priorityScore = s.getPriorityVector().get(0);
+                    return priorityScore >= minScore && priorityScore < maxScore;
+                })
                 .collect(Collectors.toList());
         
         if (prioritySchedules.isEmpty()) {
             return 0.0;
         }
         
-        long completed = prioritySchedules.stream().filter(Schedule::isCompleted).count();
+        long completed = prioritySchedules.stream().filter(s -> "completed".equals(s.getStatus())).count();
         return (double) completed / prioritySchedules.size();
     }
 } 

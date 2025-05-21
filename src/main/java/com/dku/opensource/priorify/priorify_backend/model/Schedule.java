@@ -1,139 +1,59 @@
 package com.dku.opensource.priorify.priorify_backend.model;
 
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.bson.types.ObjectId;
+
+import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Document(collection = "schedules")
+@CompoundIndexes({
+  @CompoundIndex(name = "user_start", def = "{ 'userId': 1, 'startAt': 1 }")
+})
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Schedule {
-    
+
     @Id
-    private ObjectId id;
-    
+    private String id;
+
     @Indexed
-    @DBRef
-    private User user;
-    
+    private String userId;
+
     private String title;
-    private String description;
-    
-    @Indexed
-    private LocalDateTime datetime;
-    
-    private String category;
-    private List<String> relatedCategories;
-    
-    @Indexed
-    private Double priorityScore;
-    
+    private String category; // 일정 카테고리 (학교, 취업, 취미, 친목, 등등)
+
+    private LocalDateTime startAt;
+    private LocalDateTime endAt;
+
+    private String status; // 일정 상태 (active, completed)
+    private List<ObjectId> connections; // 인접 일정 id
+
+    private String source;// google, priorify
+    private String externalEventId; // google event id
+
+    private List<Double> priorityVector;   // 우선순위 벡터 임베딩 (endAt, startAt, users collection의 highPriorities, lowPriorities을 고려)
+
+    @CreatedDate
     private LocalDateTime createdAt;
-    private boolean isCompleted;
-    private double importance;
 
-    // 기본 생성자
-    public Schedule() {
-        this.createdAt = LocalDateTime.now();
-        this.isCompleted = false;
-    }
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
 
-    // 모든 필드를 포함하는 생성자
-    public Schedule(User user, String title, String description, 
-                   LocalDateTime datetime, String category, Double priorityScore) {
-        this();
-        this.user = user;
-        this.title = title;
-        this.description = description;
-        this.datetime = datetime;
-        this.category = category;
-        this.priorityScore = priorityScore;
-    }
-
-    // Getters and Setters
-    public ObjectId getId() {
-        return id;
-    }
-
-    public void setId(ObjectId id) {
-        this.id = id;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public LocalDateTime getDatetime() {
-        return datetime;
-    }
-
-    public void setDatetime(LocalDateTime datetime) {
-        this.datetime = datetime;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public List<String> getRelatedCategories() {
-        return relatedCategories;
-    }
-
-    public void setRelatedCategories(List<String> relatedCategories) {
-        this.relatedCategories = relatedCategories;
-    }
-
-    public Double getPriorityScore() {
-        return priorityScore;
-    }
-
-    public void setPriorityScore(Double priorityScore) {
-        this.priorityScore = priorityScore;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public boolean isCompleted() {
-        return isCompleted;
-    }
-
-    public void setCompleted(boolean completed) {
-        isCompleted = completed;
-    }
-
-    public double getImportance() {
-        return importance;
-    }
-
-    public void setImportance(double importance) {
-        this.importance = importance;
-    }
-} 
+}
