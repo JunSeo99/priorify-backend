@@ -33,4 +33,4 @@ jobs:
       - name: Trigger Jenkins Deploy
         run: |
           curl -X POST \
-            "https://${{ secrets.JENKINS_HOST }}/job/priorify-deploy/build?token=${{ secrets.DEPLOY_TOKEN }}"
+            "${{ secrets.JENKINS_HOST }}/job/priorify-deploy/build?token=${{ secrets.DEPLOY_TOKEN }}"
