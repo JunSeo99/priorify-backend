@@ -1,0 +1,36 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: Build and push
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t junseosong/priorify-backend:amd64-latest \
+            --push .
+
+      #Jenkins에 배포 트리거
+      - name: Trigger Jenkins Deploy
+        run: |
+          curl -X POST \
+            "https://${{ secrets.JENKINS_HOST }}/job/priorify-deploy/build?token=${{ secrets.DEPLOY_TOKEN }}"
