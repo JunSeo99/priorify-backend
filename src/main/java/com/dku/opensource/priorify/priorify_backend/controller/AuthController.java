@@ -216,7 +216,8 @@ public class AuthController {
                     googleAPIService.syncGoogleCalendar(userId, googleAccessToken)
                         .subscribeOn(Schedulers.io())
                         .subscribe(
-                            result -> log.info("캘린더 동기화 완료: {}", result),
+                            result -> log.info("캘린더 동기화 완료: {} (성공률: {:.1f}%)", 
+                                    result.getMessage(), result.getSuccessRate()),
                             error -> log.error("캘린더 동기화 실패: ", error)
                         );
                 }
