@@ -1,13 +1,14 @@
 package com.dku.opensource.priorify.priorify_backend.controller;
 
+import com.dku.opensource.priorify.priorify_backend.service.GoogleAPIService;
 import com.dku.opensource.priorify.priorify_backend.service.UserService;
-import com.dku.opensource.priorify.priorify_backend.dto.LoginRequest;
-import com.dku.opensource.priorify.priorify_backend.dto.SignUpRequest;
 import com.dku.opensource.priorify.priorify_backend.dto.UserResponseDto;
 import com.dku.opensource.priorify.priorify_backend.dto.GoogleLoginRequest;
 import com.dku.opensource.priorify.priorify_backend.model.User;
 import com.dku.opensource.priorify.priorify_backend.security.JwtTokenProvider;
 import lombok.extern.slf4j.Slf4j;
+
+import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -16,20 +17,18 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.validation.Valid;
-import java.util.Collections;
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -53,49 +52,13 @@ public class AuthController {
 
     @Autowired
     private RestTemplate restTemplate;
+    
+    @Autowired
+    private GoogleAPIService googleAPIService;
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest) {
-        // 사용자 이름이 이미 사용 중인지 확인
-        if (userService.findByName(signUpRequest.getName()) != null) {
-            return ResponseEntity.badRequest().body("Username is already taken!");
-        }
+    // 구글 로그인으로 처리하기 때문에 기존 로그인/회원가입 제거
 
-        // 새 사용자 생성
-        User user = new User();
-        user.setName(signUpRequest.getName());
-        user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        
-        userService.save(user);
-
-        return ResponseEntity.ok("User registered successfully!");
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        User user = userService.findByName(loginRequest.getName());
-        
-        if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid username or password");
-        }
-
-        String token = jwtTokenProvider.generateToken(user.getName());
-        
-        // 응답 헤더에 JWT 토큰 추가
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Bearer " + token);
-        
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("token", token);
-        responseBody.put("user", UserResponseDto.builder()
-                .userId(user.getId().toHexString())
-                .name(user.getName())
-                .message("Login successful")
-                .build());
-        
-        return ResponseEntity.ok().headers(headers).body(responseBody);
-    }
-
+    // 구글 로그인 처리
     @PostMapping("/google")
     public ResponseEntity<?> authenticateGoogleUser(@Valid @RequestBody GoogleLoginRequest googleLoginRequest) {
         try {
@@ -118,11 +81,7 @@ public class AuthController {
                     user = new User();
                     user.setGoogleId(googleId);
                     user.setEmail(email);
-                    user.setName(email.substring(0, email.indexOf('@'))); // 이메일 주소에서 사용자 이름 추출
-                    user.setDisplayName(name);
-                    // 랜덤 비밀번호 생성
-                    user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
-                    
+                    user.setName(name);
                     userService.save(user);
                     log.info("새 구글 사용자 등록: {}", email);
                 }
@@ -139,7 +98,6 @@ public class AuthController {
                 responseBody.put("user", UserResponseDto.builder()
                         .userId(user.getId().toHexString())
                         .name(user.getName())
-                        .message("Google login successful")
                         .build());
                 
                 return ResponseEntity.ok().headers(headers).body(responseBody);
@@ -153,10 +111,11 @@ public class AuthController {
     }
     
     @GetMapping("/oauth2/callback/google")
-    public ResponseEntity<?> handleGoogleCallback(@RequestParam("code") String code) {
-        try {
-            log.info("구글 OAuth 콜백 요청 처리: {}", code);
-            
+    public Single<ResponseEntity<Map<String, Object>>> handleGoogleCallback(@RequestParam("code") String code) {
+
+        //TODO: RX로 비동기 처리 한뒤, 구글 캘린더 API 호출 해야할듯..
+        // 먼저 Response 응답 후 캘린더 가져오기
+        return Single.fromCallable(() -> {
             // 1. 인증 코드로 액세스 토큰 요청
             String googleTokenUrl = "https://oauth2.googleapis.com/token";
             
@@ -184,7 +143,9 @@ public class AuthController {
             String idToken = (String) tokenResponse.getBody().get("id_token");
             
             if (accessToken == null || idToken == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("액세스 토큰 획득 실패");
+                Map<String, Object> errorBody = new HashMap<>();
+                errorBody.put("error", "구글 로그인 실패");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody);
             }
             
             // ID 토큰에서 사용자 정보 추출
@@ -192,7 +153,9 @@ public class AuthController {
             Map<String, Object> tokenInfo = restTemplate.getForObject(googleTokenInfoUrl, Map.class);
             
             if (tokenInfo == null || !googleClientId.equals(tokenInfo.get("aud"))) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("유효하지 않은 ID 토큰");
+                Map<String, Object> errorBody = new HashMap<>();
+                errorBody.put("error", "유효하지 않은 ID 토큰");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody);
             }
             
             // 3. 사용자 정보 확인 및 저장
@@ -202,18 +165,17 @@ public class AuthController {
             
             // 4. DB에서 사용자 확인 또는 새로 생성
             User user = userService.findByGoogleId(googleId);
+            boolean isNewUser = false;
             
             if (user == null) {
                 user = new User();
                 user.setGoogleId(googleId);
                 user.setEmail(email);
-                user.setName(email.substring(0, email.indexOf('@'))); // 이메일 주소에서 사용자 이름 추출
-                user.setDisplayName(name);
-                // 랜덤 비밀번호 생성
-                user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                user.setName(name);
                 
                 userService.save(user);
                 log.info("새 구글 사용자 등록: {}", email);
+                isNewUser = true;
             }
             
             // 5. JWT 토큰 생성
@@ -229,17 +191,39 @@ public class AuthController {
             responseBody.put("user", UserResponseDto.builder()
                     .userId(user.getId().toHexString())
                     .name(user.getName())
-                    .message("Google login successful")
+                    .email(user.getEmail())
+                    .googleAccessToken(accessToken)
                     .build());
             
             // 8. 리다이렉트 없이 JSON 응답 반환
             return ResponseEntity.ok()
                 .headers(responseHeaders)
                 .body(responseBody);
-            
-        } catch (Exception e) {
-            log.error("인증 콜백 처리 실패: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("인증 실패: " + e.getMessage());
-        }
+        })
+        .subscribeOn(Schedulers.io())
+        .observeOn(Schedulers.single())
+        .doAfterSuccess(response -> {
+            // 구글 캘린더 동기화 시작
+            Map<String, Object> responseBodyMap = response.getBody();
+            if (responseBodyMap != null) {
+                Object userObj = responseBodyMap.get("user");
+                if (userObj instanceof UserResponseDto) {
+                    UserResponseDto userResponseDto = (UserResponseDto) userObj;
+                    String userId = userResponseDto.getUserId();
+                    String googleAccessToken = userResponseDto.getGoogleAccessToken();
+                    
+                    // 구글 캘린더 동기화 비동기 처리
+                    googleAPIService.syncGoogleCalendar(userId, googleAccessToken)
+                        .subscribeOn(Schedulers.io())
+                        .subscribe(
+                            result -> log.info("캘린더 동기화 완료: {}", result),
+                            error -> log.error("캘린더 동기화 실패: ", error)
+                        );
+                }
+            }
+        })
+        .doOnError(error -> {
+            log.error("구글 인증 콜백 처리 실패: ", error);
+        });
     }
 } 

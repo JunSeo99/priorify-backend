@@ -1,6 +1,7 @@
 package com.dku.opensource.priorify.priorify_backend.controller;
 
 import com.dku.opensource.priorify.priorify_backend.service.PriorityService;
+import com.dku.opensource.priorify.priorify_backend.dto.PriorityDto;
 import com.dku.opensource.priorify.priorify_backend.model.CategoryPriority;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,33 +21,20 @@ public class PriorityController {
         this.priorityService = priorityService;
     }
 
-    @PostMapping("/high")
-    public ResponseEntity<?> setHighPriorities(
+    // 상위, 하위 통합하는게 나을듯..
+
+    @PostMapping
+    public ResponseEntity<?> setPriorities(
             HttpServletRequest request,
-            @Valid @RequestBody List<CategoryPriority> priorities) {
+            @Valid @RequestBody PriorityDto priorityDto) {
         String userId = (String) request.getAttribute("userId");
-        priorityService.setHighPriorities(new ObjectId(userId), priorities);
-        return ResponseEntity.ok("상위 우선순위가 설정되었습니다.");
+        priorityService.setPriorities(new ObjectId(userId), priorityDto);
+        return ResponseEntity.ok("우선순위가 설정되었습니다.");
     }
 
-    @PostMapping("/low")
-    public ResponseEntity<?> setLowPriorities(
-            HttpServletRequest request,
-            @Valid @RequestBody List<CategoryPriority> priorities) {
+    @GetMapping
+    public ResponseEntity<PriorityDto> getPriorities(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        priorityService.setLowPriorities(new ObjectId(userId), priorities);
-        return ResponseEntity.ok("하위 우선순위가 설정되었습니다.");
-    }
-
-    @GetMapping("/high")
-    public ResponseEntity<List<CategoryPriority>> getHighPriorities(HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        return ResponseEntity.ok(priorityService.getHighPriorities(userId));
-    }
-
-    @GetMapping("/low")
-    public ResponseEntity<List<CategoryPriority>> getLowPriorities(HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        return ResponseEntity.ok(priorityService.getLowPriorities(userId));
+        return ResponseEntity.ok(priorityService.getPriorities(userId));
     }
 } 

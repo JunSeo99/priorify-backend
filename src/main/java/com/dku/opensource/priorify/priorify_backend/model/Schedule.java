@@ -13,10 +13,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.bson.types.ObjectId;
 
-import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,12 +29,17 @@ import java.util.List;
 public class Schedule {
 
     @Id
-    private String id;
+    private ObjectId id;
 
     @Indexed
-    private String userId;
+    private ObjectId userId;
 
     private String title;
+    private String description;
+    private String location;
+    private String googleEventId;
+    private List<Double> embedding;
+
     private String category; // 일정 카테고리 (학교, 취업, 취미, 친목, 등등)
 
     private LocalDateTime startAt;
@@ -44,11 +47,6 @@ public class Schedule {
 
     private String status; // 일정 상태 (active, completed)
     private List<ObjectId> connections; // 인접 일정 id
-
-    private String source;// google, priorify
-    private String externalEventId; // google event id
-
-    private List<Double> priorityVector;   // 우선순위 벡터 임베딩 (endAt, startAt, users collection의 highPriorities, lowPriorities을 고려)
 
     @CreatedDate
     private LocalDateTime createdAt;

@@ -27,8 +27,8 @@ public class ScheduleController {
             HttpServletRequest request,
             @Valid @RequestBody Schedule schedule) {
         String userId = (String) request.getAttribute("userId");
-        Schedule createdSchedule = scheduleService.createSchedule(userId, schedule);
-        return ResponseEntity.ok(createdSchedule);
+        // Schedule createdSchedule = scheduleService.createSchedule(userId, schedule);
+        return ResponseEntity.ok(null);
     }
 
     @PutMapping("/{scheduleId}")
@@ -37,8 +37,8 @@ public class ScheduleController {
             @PathVariable String scheduleId,
             @Valid @RequestBody Schedule schedule) {
         String userId = (String) request.getAttribute("userId");
-        Schedule updatedSchedule = scheduleService.updateSchedule(userId, scheduleId, schedule);
-        return ResponseEntity.ok(updatedSchedule);
+        // Schedule updatedSchedule = scheduleService.updateSchedule(userId, scheduleId, schedule);
+        return ResponseEntity.ok(null);
     }
 
     @DeleteMapping("/{scheduleId}")
@@ -46,8 +46,8 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        scheduleService.deleteSchedule(userId, scheduleId);
-        return ResponseEntity.ok("일정이 삭제되었습니다.");
+        // scheduleService.deleteSchedule(userId, scheduleId);
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/{scheduleId}")
@@ -55,18 +55,18 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        Schedule schedule = scheduleService.findScheduleByIdAndUser(scheduleId, userId);
-        if (schedule == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(schedule);
+        // Schedule schedule = scheduleService.findScheduleByIdAndUser(scheduleId, userId);
+        // if (schedule == null) {
+        //     return ResponseEntity.notFound().build();
+        // }
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping
     public ResponseEntity<List<Schedule>> getAllSchedules(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        List<Schedule> schedules = scheduleService.findAllSchedulesByUser(userId);
-        return ResponseEntity.ok(schedules);
+        // List<Schedule> schedules = scheduleService.findAllSchedulesByUser(userId);
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/range")
@@ -75,8 +75,8 @@ public class ScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         String userId = (String) request.getAttribute("userId");
-        List<Schedule> schedules = scheduleService.findSchedulesByDateRange(new ObjectId(userId), start, end);
-        return ResponseEntity.ok(schedules);
+        // List<Schedule> schedules = scheduleService.findSchedulesByDateRange(new ObjectId(userId), start, end);
+        return ResponseEntity.ok(null);
     }
 
     @PatchMapping("/{scheduleId}/toggle-completion")
@@ -84,7 +84,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        scheduleService.toggleScheduleStatus(userId, scheduleId);
-        return ResponseEntity.ok("일정 완료 상태가 변경되었습니다.");
+        // scheduleService.toggleScheduleStatus(userId, scheduleId);
+        return ResponseEntity.ok(null);
     }
 } 
