@@ -24,10 +24,8 @@ public class User {
     @Id
     private ObjectId id;
     
-    @Indexed(unique = true)
     private String name;
     private String password;
-    
     private String googleId;
     private String email;
     

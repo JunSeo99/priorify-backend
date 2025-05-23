@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -26,5 +27,14 @@ public class ControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Test
+    public void testErrorController() throws Exception {
+        System.out.println("testErrorController");
+        String timeMin = LocalDateTime.now().minusMonths(1)
+                    .atZone(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
+        System.out.println("timeMin: " + timeMin);
+    }
 
 }
