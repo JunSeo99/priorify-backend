@@ -3,6 +3,7 @@ package com.dku.opensource.priorify.priorify_backend.controller;
 import com.dku.opensource.priorify.priorify_backend.service.GoogleAPIService;
 import com.dku.opensource.priorify.priorify_backend.service.UserService;
 import com.dku.opensource.priorify.priorify_backend.dto.UserResponseDto;
+import com.dku.opensource.priorify.priorify_backend.dto.CalendarSyncResultDto;
 import com.dku.opensource.priorify.priorify_backend.dto.GoogleLoginRequest;
 import com.dku.opensource.priorify.priorify_backend.model.User;
 import com.dku.opensource.priorify.priorify_backend.security.JwtTokenProvider;
@@ -113,7 +114,7 @@ public class AuthController {
     @GetMapping("/oauth2/callback/google")
     public Single<ResponseEntity<Map<String, Object>>> handleGoogleCallback(@RequestParam("code") String code) {
 
-        //TODO: RX로 비동기 처리 한뒤, 구글 캘린더 API 호출 해야할듯..
+        //TODO: RX로 비동기 처리 한뒤, 구글 캘린더 API 호출 해야할듯.. -> 완료
         // 먼저 Response 응답 후 캘린더 가져오기
         return Single.fromCallable(() -> {
             // 1. 인증 코드로 액세스 토큰 요청
@@ -214,13 +215,9 @@ public class AuthController {
                     String userId = userResponseDto.getUserId();
                     String googleAccessToken = userResponseDto.getGoogleAccessToken();
                     
-                    // 구글 캘린더 동기화 비동기 처리
-                    googleAPIService.syncGoogleCalendar(userId, googleAccessToken)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(
-                            result -> log.info("캘린더 동기화 완료"),
-                            error -> log.error("캘린더 동기화 실패: ", error)
-                        );
+                    // 효용 없는 Rx 제거
+                    CalendarSyncResultDto result = googleAPIService.syncGoogleCalendar(userId, googleAccessToken);
+                    log.info("캘린더 동기화 완료: {}", result.getMessage());
                 }
             }
         })

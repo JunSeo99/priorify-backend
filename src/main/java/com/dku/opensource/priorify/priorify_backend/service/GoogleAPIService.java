@@ -56,7 +56,7 @@ public class GoogleAPIService {
     private static final int BATCH_SIZE = 4;
     
     // 회원가입 후, 동기화 작업
-    public CalendarSyncResultDto syncGoogleCalendar(String userId, String googleAccessToken) {
+    public CalendarSyncResultDto syncGoogleCalendar(String userId, String googleAccessToken)  {
         LocalDateTime syncStartTime = LocalDateTime.now();
         CalendarSyncResultDto.CalendarSyncResultDtoBuilder resultBuilder = CalendarSyncResultDto.builder()
                 .userId(userId)
