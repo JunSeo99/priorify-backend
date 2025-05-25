@@ -125,7 +125,7 @@ public class AuthController {
             tokenRequest.add("client_secret", googleClientSecret);
             tokenRequest.add("code", code);
             tokenRequest.add("grant_type", "authorization_code");
-            tokenRequest.add("redirect_uri", "http://localhost:3000/auth/callback"); // TODO: - 배포시 URL 수정
+            tokenRequest.add("redirect_uri", "https://priorify-one.vercel.app:3000/auth/callback"); // TODO: - 배포시 URL 수정 -> 완료
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
