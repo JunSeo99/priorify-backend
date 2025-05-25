@@ -246,7 +246,6 @@ public class GoogleAPIService {
         Query query = new Query(Criteria.where("_id").is(existingSchedule.getId()));
         Update update = new Update()
                 .set("title", event.getTitle())
-                .set("categories", event.getCategories())
                 .set("startAt", event.getStartAt())
                 .set("endAt", event.getEndAt())
                 .set("updatedAt", LocalDateTime.now());
