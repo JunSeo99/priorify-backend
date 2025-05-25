@@ -1,16 +1,39 @@
-## Priorify Backend
+# Priorify major backend
+
+> “누구나 J가 될 수 있도록”  
+> 일정 관리의 복잡함을 그래프로 시각화하여, 어떤 일을 먼저 처리해야 할지 명확하게 알려주는 AI 기반 스케줄링 서비스
 
 [![Backend](https://img.shields.io/badge/service-backend-green)]()
 
----
 
-### 🌟 프로젝트 개요
-
-Priorify는 사용자가 작업을 간편하게 우선순위화할 수 있도록 돕는 그래픽 to-do 웹 애플리케이션입니다. Fine-tuned LLaMA 모델을 활용한 Auto-categorization과 D3.js 기반의 동적 Visualization을 통해, 단순한 텍스트 입력만으로 중요도에 따라 색상과 크기가 변하는 Task graph를 제공합니다.
-
-이 저장소는 Backend 구현(Spring Boot, MongoDB)을 포함하며, AWS EC2에 배포되어 있습니다. Frontend 코드 확인은 [priorify-frontend](https://github.com/JunSeo99/priorify-frontend.git)에서 가능합니다.
 
 ---
+
+[![🖥️ Frontend](https://img.shields.io/badge/Frontend-Next.js-151515?style=for-the-badge&logo=next.js&logoColor=white)](https://github.com/JunSeo99/priorify-backend-frontend)
+
+[![⚡ FastAPI Server](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://github.com/JunSeo99/priorify-backend-text2vec)
+
+
+## 🚀 프로젝트 개요
+
+Priorify는 사용자의 Google 캘린더 일정을 불러와  
+1. **텍스트 임베딩** (Text2Vec + NER)  
+2. **유사도 기반 Vector Search** (MongoDB Atlas Vector Search)  
+3. **그래프 시각화 & 카테고리 자동 분류**  
+4. **우선순위 자동 결정**  
+
+해당 레포지토리는 **Spring Boot**(Service API)입니다.
+
+---
+
+## 📦 주요 기술 스택
+
+| 구성 요소       | 기술/라이브러리                                    |
+| -------------- | -------------------------------------------------- |
+| 주요 프레임 워크    | Spring Boot, Spring Data MongoDB, RxJava      |
+| 데이터베이스    | MongoDB Atlas (Vector Search)                      |
+| CI/CD          | GitHub Actions → Jenkins → AWS EC2 (Docker)        |
+| 인증/연동      | OAuth2 (Google Login & Calendar API)               |
 
 ### 🚀 필수 기능
 
@@ -19,16 +42,6 @@ Priorify는 사용자가 작업을 간편하게 우선순위화할 수 있도록
 * **D3.js를 이용해 중요도에 따라 크기·색상으로 표시**
 * **Spring Boot RESTful API와 MongoDB storage on AWS EC2**
 * **CI/CD**: GitHub Webhook & AWS CodeDeploy Agent로 자동화된 Deployment
-
----
-
-### 🛠 Tech Stack
-
-* **Backend**: Spring Boot, Spring Data MongoDB
-* **Database**: MongoDB Atlas
-* **AI**: Fine-tuned LLaMA API
-* **Visualization**: D3.js (Frontend)
-* **DevOps**: AWS EC2, CodeDeploy Agent, GitHub Webhooks
 
 ---
 
