@@ -54,4 +54,4 @@ jobs:
           curl -X POST \
             -u "${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_API_TOKEN }}" \
             -H "${{ steps.get_crumb.outputs.field }}: ${{ steps.get_crumb.outputs.crumb }}" \
-            "${{ secrets.JENKINS_HOST }}/job/priorify-deploy/build?token=${{ secrets.DEPLOY_TOKEN }}"
+            "${{ secrets.JENKINS_HOST }}/job/deploy-backend/build?token=${{ secrets.DEPLOY_TOKEN }}"
