@@ -51,8 +51,8 @@ public class GoogleAPIService {
     private final MongoTemplate mongoTemplate;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    
-    private static final String FAST_API_EMBEDDING_URL = "http://localhost:8000/embed";
+    //VPC 내부로 접속해보자잇 
+    private static final String FAST_API_EMBEDDING_URL = "http://172.31.43.132:8000/embed";
     private static final int BATCH_SIZE = 4;
     
     // 회원가입 후, 동기화 작업
