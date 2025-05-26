@@ -1,7 +1,7 @@
 package com.dku.opensource.priorify.priorify_backend.service;
 
 import com.dku.opensource.priorify.priorify_backend.dto.ScheduleListDto;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -16,14 +16,10 @@ import java.util.List;
 
 
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
     private final JavaMailSender mailSender;
-
-    // application.yml needs to be added
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
 
 
 
