@@ -1,5 +1,6 @@
 package com.dku.opensource.priorify.priorify_backend.dto;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.dku.opensource.priorify.priorify_backend.model.CategoryPriority;
@@ -14,6 +15,6 @@ import lombok.Builder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PriorityDto {
-    private List<CategoryPriority> highPriorities;
-    private List<CategoryPriority> lowPriorities;
+    private ArrayList<CategoryPriority> highPriorities;
+    private ArrayList<CategoryPriority> lowPriorities;
 }
