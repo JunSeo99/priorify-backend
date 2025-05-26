@@ -26,7 +26,6 @@ public class User {
     private ObjectId id;
     
     private String name;
-    private String password;
     private String googleId;
     private String email;
     
