@@ -21,7 +21,7 @@ public class PriorityController {
         this.priorityService = priorityService;
     }
 
-    // 상위, 하위 통합하는게 나을듯..
+    // 상위, 하위 통합하는게 나을듯.. -> 완료
 
     @PostMapping
     public ResponseEntity<?> setPriorities(

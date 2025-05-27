@@ -11,7 +11,7 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey secretKey;
-    private final long expirationTime = 86400000; // 24시간
+    private final long expirationTime = 864000000; // 10일
 
     @Autowired
     public JwtUtil(SecretKey secretKey) {

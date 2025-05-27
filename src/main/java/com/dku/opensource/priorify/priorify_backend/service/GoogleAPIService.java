@@ -74,12 +74,10 @@ public class GoogleAPIService {
                 eventsNeedingEmbedding.addAll(analysisResult.getNewEvents());
                 eventsNeedingEmbedding.addAll(analysisResult.getTitleChangedEvents());
 
-                log.info("eventsNeedingEmbedding: " + eventsNeedingEmbedding);
                 List<GoogleCalendarEventDto> embeddedEvents = new ArrayList<>();
                 if (!eventsNeedingEmbedding.isEmpty()) {
                     embeddedEvents = requestEmbeddings(eventsNeedingEmbedding);
                 }
-                System.out.println("embeddedEvents: " + embeddedEvents);
                 
                 // 4. MongoDB에 저장/업데이트
                 SyncOperationResult operationResult = saveOrUpdateSchedules(userId, analysisResult, embeddedEvents);
