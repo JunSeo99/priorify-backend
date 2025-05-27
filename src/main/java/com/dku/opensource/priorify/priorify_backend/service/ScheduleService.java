@@ -35,33 +35,26 @@ public class ScheduleService {
     private final EmailService emailService;
     
     // 중요도 계산 상수
-    private static final double URGENCY_COEFFICIENT_A = 0.02;
+    private static final double URGENCY_COEFFICIENT_A = 0.01;
     private static final double URGENCY_COEFFICIENT_B = 0.1;
-    private static final double HIGH_PRIORITY_WEIGHT = 1.5;
-    private static final double LOW_PRIORITY_WEIGHT = 0.7;
-    private static final double SIMILARITY_THRESHOLD = 0.5;
+    private static final double HIGH_PRIORITY_WEIGHT = 2.5;
+    private static final double LOW_PRIORITY_WEIGHT = 0.5;
+    private static final double SIMILARITY_THRESHOLD = 0.6;
 
-    /**
-     * 스케줄 생성
-     */
+    // 스케줄 생성
     public Schedule createSchedule(Schedule schedule) {
         schedule.setCreatedAt(LocalDateTime.now());
         schedule.setUpdatedAt(LocalDateTime.now());
         return mongoTemplate.save(schedule);
     }
 
-    /**
-     * 스케줄 업데이트
-     */
+    // 스케줄 업데이트
     public Schedule updateSchedule(Schedule schedule) {
         schedule.setUpdatedAt(LocalDateTime.now());
         return mongoTemplate.save(schedule);
     }
 
-    /**
-     * 사용자의 모든 스케줄을 Node Connection Graph 형태로 조회
-     * 구조: User(Root) -> Categories -> Schedules
-     */
+    // 사용자의 모든 스케줄을 Node Connection Graph 형태로 조회
     public ScheduleGraphResponseDto getScheduleGraph(String userId) {
         Optional<User> userOpt = userService.findById(new ObjectId(userId));
         if (!userOpt.isPresent()) {
@@ -244,9 +237,7 @@ public class ScheduleService {
             ))));
     }
     
-    /**
-     * 카테고리 가중치 계산을 위한 MongoDB Expression 생성
-     */
+    // 가중치 계산 함수
     private Document createCategoryWeightExpression(User user) {
         List<String> highPriorities = user.getHighPriorities() != null ? 
                 user.getHighPriorities().stream()
@@ -257,22 +248,54 @@ public class ScheduleService {
                 user.getLowPriorities().stream()
                         .map(cp -> cp.getCategory())
                         .collect(Collectors.toList()) : new ArrayList<>();
+        
+        Map<String, Integer> highPriorityRanks = user.getHighPriorities() != null ?
+                user.getHighPriorities().stream()
+                        .collect(Collectors.toMap(
+                            cp -> cp.getCategory(),
+                            cp -> cp.getRank(),
+                            (existing, replacement) -> existing)) : new HashMap<>();
+
+        Map<String, Integer> lowPriorityRanks = user.getLowPriorities() != null ?
+                user.getLowPriorities().stream()
+                        .collect(Collectors.toMap(
+                            cp -> cp.getCategory(),
+                            cp -> cp.getRank(),
+                            (existing, replacement) -> existing)) : new HashMap<>();
+        
         System.out.println("highPriorities: " + highPriorities);
         System.out.println("lowPriorities: " + lowPriorities);
-        return new Document("$cond", Arrays.asList(
-            new Document("$in", Arrays.asList("$categories", highPriorities)),
-            HIGH_PRIORITY_WEIGHT,
-            new Document("$cond", Arrays.asList(
-                new Document("$in", Arrays.asList("$categories", lowPriorities)),
-                LOW_PRIORITY_WEIGHT,
-                1.0
-            ))
-        ));
+        System.out.println("highPriorityRanks: " + highPriorityRanks);
+        System.out.println("lowPriorityRanks: " + lowPriorityRanks);
+        
+        List<Document> switchBranches = new ArrayList<>();
+        
+        for (Map.Entry<String, Integer> entry : highPriorityRanks.entrySet()) {
+            String category = entry.getKey();
+            Integer rank = entry.getValue();
+            double weight = HIGH_PRIORITY_WEIGHT + (4 - rank) * 0.5; // 1순위 4.0, 2순위 3.5, 3순위 3.0
+            
+            switchBranches.add(new Document()
+                .append("case", new Document("$eq", Arrays.asList("$categories", category)))
+                .append("then", weight));
+        }
+        
+        for (Map.Entry<String, Integer> entry : lowPriorityRanks.entrySet()) {
+            String category = entry.getKey();
+            Integer rank = entry.getValue();
+            double weight = LOW_PRIORITY_WEIGHT - (rank - 1) * 0.1; // 1순위 0.5, 2순위 0.4, 3순위 0.3
+            
+            switchBranches.add(new Document()
+                .append("case", new Document("$eq", Arrays.asList("$categories", category)))
+                .append("then", weight));
+        }
+        
+        return new Document("$switch", new Document()
+            .append("branches", switchBranches)
+            .append("default", 1.0)); // 기본 가중치
     }
     
-    /**
-     * 사용자 루트 노드 생성
-     */
+    // 사용자 루트 노드 생성
     private GraphNodeDto createUserNode(User user) {
         return GraphNodeDto.builder()
                 .id("user_" + user.getId().toString())
@@ -282,9 +305,7 @@ public class ScheduleService {
                 .build();
     }
     
-    /**
-     * 카테고리 노드 생성
-     */
+    // 카테고리 노드 생성
     private GraphNodeDto createCategoryNode(String categoryName, int scheduleCount, Double avgPriority) {
         return GraphNodeDto.builder()
                 .id("category_" + categoryName.replaceAll(" ", "_"))
@@ -296,9 +317,7 @@ public class ScheduleService {
                 .build();
     }
     
-    /**
-     * 스케줄 노드 생성
-     */
+    // 스케줄 노드 생성
     private GraphNodeDto createScheduleNode(Document scheduleDoc, User user) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         
@@ -321,9 +340,7 @@ public class ScheduleService {
                 .build();
     }
     
-    /**
-     * 엣지 생성
-     */
+    // 엣지 생성
     private GraphEdgeDto createEdge(String source, String target, String type, Double weight) {
         String color = getEdgeColor(type, weight);
         Integer thickness = getEdgeThickness(weight);
@@ -339,9 +356,7 @@ public class ScheduleService {
                 .build();
     }
     
-    /**
-     * 유사한 스케줄 ID들 찾기 (Document 형식 Vector Search)
-     */
+    // 유사한 스케줄 ID들 찾기
     private List<String> findSimilarScheduleIds(String scheduleId, String userId) {
         // 현재 스케줄의 임베딩 벡터 조회
         Schedule currentSchedule = mongoTemplate.findById(scheduleId, Schedule.class);
@@ -352,9 +367,7 @@ public class ScheduleService {
         
         List<Double> queryVector = currentSchedule.getEmbedding();
         
-        // Document 형식 Vector Search Pipeline
         List<Document> pipeline = Arrays.asList(
-            // Stage 1: Vector Search
             new Document("$vectorSearch", new Document()
                 .append("index", "vector_index")
                 .append("path", "embedding")
@@ -364,23 +377,13 @@ public class ScheduleService {
                 .append("filter", new Document()
                     .append("userId", new ObjectId(userId))
                     .append("status", "active"))),
-            
-            // Stage 2: 자기 자신 제외
             new Document("$match", new Document()
                 .append("_id", new Document("$ne", new ObjectId(scheduleId)))),
-            
-            // Stage 3: similarity score 추가
             new Document("$addFields", new Document()
                 .append("similarity", new Document("$meta", "vectorSearchScore"))),
-            
-            // Stage 4: 임계값 이상만 필터링
             new Document("$match", new Document()
                 .append("similarity", new Document("$gte", SIMILARITY_THRESHOLD))),
-            
-            // Stage 5: 상위 5개만 선택
             new Document("$limit", 5),
-            
-            // Stage 6: ID만 프로젝션
             new Document("$project", new Document()
                 .append("_id", new Document("$toString", "$_id")))
         );
@@ -401,9 +404,7 @@ public class ScheduleService {
         }
     }
     
-    /**
-     * 상위 카테고리들 추출
-     */
+    // 상위 카테고리들 추출
     private List<String> getTopCategoriesFromAggregation(List<Document> categorySchedules) {
         return categorySchedules.stream()
                 .limit(5)
@@ -411,9 +412,7 @@ public class ScheduleService {
                 .collect(Collectors.toList());
     }
     
-    /**
-     * 그래프 메타데이터 생성
-     */
+    // 그래프 메타데이터 생성
     private GraphMetadataDto createGraphMetadata() {
         return GraphMetadataDto.builder()
                 .layoutType("hierarchical")
@@ -445,9 +444,7 @@ public class ScheduleService {
         }
     }
     
-    /**
-     * 엣지 두께 결정
-     */
+    // 엣지 두께 결정
     private Integer getEdgeThickness(Double weight) {
         System.out.println("weight: " + weight);
 
@@ -456,9 +453,7 @@ public class ScheduleService {
         else return 2;
     }
     
-    /**
-     * 스케줄 목록 DTO 생성
-     */
+    // 스케줄 목록 DTO 생성
     private ScheduleListDto createScheduleListDto(Document scheduleDoc, List<String> categories) {
         Date startAt = scheduleDoc.getDate("startAt");
         Date endAt = scheduleDoc.getDate("endAt");
@@ -480,16 +475,12 @@ public class ScheduleService {
                 .build();
     }
     
-    /**
-     * 특정 스케줄 조회
-     */
+    // 특정 스케줄 조회
     public Schedule getScheduleById(String scheduleId) {
         return mongoTemplate.findById(scheduleId, Schedule.class);
     }
     
-    /**
-     * 사용자의 모든 스케줄 조회
-     */
+    // 사용자의 모든 스케줄 조회
     public List<ScheduleListDto> getUserSchedules(String userId) {
         List<Document> pipeline = Arrays.asList(
             new Document("$match", new Document()

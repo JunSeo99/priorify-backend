@@ -1,0 +1,24 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGOURI}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 39539365824-0univubnhd6st88lhonc95rlpm5de51e.apps.googleusercontent.com
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
+jwt:
+  secret: ${JWT_SECRET:fffffff}
+  expiration: 86400000 # 24시간
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.dku.priorify: DEBUG

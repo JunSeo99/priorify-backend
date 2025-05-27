@@ -44,3 +44,4 @@ out/
 
 ### custom ###
 FRONTEND.md
+# src/main/resources/application.yml

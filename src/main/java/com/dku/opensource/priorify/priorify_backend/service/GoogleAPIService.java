@@ -51,21 +51,20 @@ public class GoogleAPIService {
     private final MongoTemplate mongoTemplate;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    
-    private static final String FAST_API_EMBEDDING_URL = "http://localhost:8000/embed";
+    //VPC 내부로 접속해보자잇 
+    private static final String FAST_API_EMBEDDING_URL = "http://172.31.43.132:8000/embed";
     private static final int BATCH_SIZE = 4;
     
     // 회원가입 후, 동기화 작업
-    public Single<CalendarSyncResultDto> syncGoogleCalendar(String userId, String googleAccessToken) {
-        return Single.fromCallable((Callable<CalendarSyncResultDto>) () -> {
-            LocalDateTime syncStartTime = LocalDateTime.now();
-            CalendarSyncResultDto.CalendarSyncResultDtoBuilder resultBuilder = CalendarSyncResultDto.builder()
-                    .userId(userId)
-                    .syncStartTime(syncStartTime);
+    public CalendarSyncResultDto syncGoogleCalendar(String userId, String googleAccessToken)  {
+        LocalDateTime syncStartTime = LocalDateTime.now();
+        CalendarSyncResultDto.CalendarSyncResultDtoBuilder resultBuilder = CalendarSyncResultDto.builder()
+                .userId(userId)
+                .syncStartTime(syncStartTime);
             
-            try {
-                // 1. 구글 캘린더 API 호출
-                List<GoogleCalendarEventDto> events = fetchGoogleCalendarEvents(googleAccessToken);
+        try {
+            // 1. 구글 캘린더 API 호출
+            List<GoogleCalendarEventDto> events = fetchGoogleCalendarEvents(googleAccessToken);
                 
                 // 2. 기존 스케줄과 비교하여 처리 대상 분류
                 SyncAnalysisResult analysisResult = analyzeEventsForSync(userId, events);
@@ -75,12 +74,10 @@ public class GoogleAPIService {
                 eventsNeedingEmbedding.addAll(analysisResult.getNewEvents());
                 eventsNeedingEmbedding.addAll(analysisResult.getTitleChangedEvents());
 
-                log.info("eventsNeedingEmbedding: " + eventsNeedingEmbedding);
                 List<GoogleCalendarEventDto> embeddedEvents = new ArrayList<>();
                 if (!eventsNeedingEmbedding.isEmpty()) {
                     embeddedEvents = requestEmbeddings(eventsNeedingEmbedding);
                 }
-                System.out.println("embeddedEvents: " + embeddedEvents);
                 
                 // 4. MongoDB에 저장/업데이트
                 SyncOperationResult operationResult = saveOrUpdateSchedules(userId, analysisResult, embeddedEvents);
@@ -107,9 +104,6 @@ public class GoogleAPIService {
                         .message("캘린더 동기화 실패: " + e.getMessage())
                         .build();
             }
-        })
-        .subscribeOn(Schedulers.io())
-        .observeOn(Schedulers.single());
     }
     
     // 기존 스케줄과 비교하여 동기화 전략 분석
@@ -250,7 +244,6 @@ public class GoogleAPIService {
         Query query = new Query(Criteria.where("_id").is(existingSchedule.getId()));
         Update update = new Update()
                 .set("title", event.getTitle())
-                .set("categories", event.getCategories())
                 .set("startAt", event.getStartAt())
                 .set("endAt", event.getEndAt())
                 .set("updatedAt", LocalDateTime.now());

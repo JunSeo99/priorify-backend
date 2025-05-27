@@ -7,8 +7,6 @@ COPY gradlew .
 COPY gradle gradle
 COPY build.gradle settings.gradle ./
 
-# 의존성 캐시
-RUN ./gradlew dependencyInsight --scan --no-daemon || true
 
 # 소스 전체 복사 & 빌드
 COPY src src

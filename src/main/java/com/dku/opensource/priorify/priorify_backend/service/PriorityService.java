@@ -63,8 +63,8 @@ public class PriorityService {
         }
         User user = userOpt.get();
         return PriorityDto.builder()
-            .highPriorities(user.getHighPriorities())
-            .lowPriorities(user.getLowPriorities())
+            .highPriorities(new ArrayList<>(user.getHighPriorities()))
+            .lowPriorities(new ArrayList<>(user.getLowPriorities()))
             .build();
     }
 
