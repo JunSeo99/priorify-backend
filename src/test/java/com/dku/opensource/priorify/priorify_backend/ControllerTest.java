@@ -1,6 +1,7 @@
 package com.dku.opensource.priorify.priorify_backend;
 
 import com.dku.opensource.priorify.priorify_backend.dto.LoginRequest;
+import com.dku.opensource.priorify.priorify_backend.service.EmailService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,10 @@ public class ControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    EmailService emailService;
+
+
     @Test
     public void testErrorController() throws Exception {
         System.out.println("testErrorController");
@@ -35,6 +40,12 @@ public class ControllerTest {
                     .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
         System.out.println("timeMin: " + timeMin);
+    }
+
+
+    @Test
+    public void test() {
+        emailService.test();
     }
 
 }

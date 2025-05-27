@@ -55,7 +55,7 @@ public class ScheduleService {
     }
 
     // 사용자의 모든 스케줄을 Node Connection Graph 형태로 조회
-    public ScheduleGraphResponseDto getScheduleGraph(String userId) {
+    public ScheduleGraphResponseDto getScheduleGraph(String userId, int days) {
         Optional<User> userOpt = userService.findById(new ObjectId(userId));
         if (!userOpt.isPresent()) {
             throw new RuntimeException("사용자를 찾을 수 없습니다: " + userId);
@@ -63,7 +63,7 @@ public class ScheduleService {
         User user = userOpt.get();
 
         // 1. 카테고리별 스케줄 집계 (Document 형식 Aggregation)
-        List<Document> categorySchedules = getCategoryScheduleAggregation(userId, user);
+        List<Document> categorySchedules = getCategoryScheduleAggregation(userId, user, days);
 
         // 2. 그래프 노드와 엣지 생성
         List<GraphNodeDto> nodes = new ArrayList<>();
@@ -77,7 +77,7 @@ public class ScheduleService {
         int totalSchedules = 0;
         int totalCategories = categorySchedules.size();
         double totalPriority = 0.0;
-        List<ScheduleListDto> allSchedules = new ArrayList<>();
+        // List<ScheduleListDto> allSchedules = new ArrayList<>();
         
         // 스케줄 ID를 키로 하는 Map을 생성하여 중복 방지
         Map<String, GraphNodeDto> scheduleNodes = new HashMap<>();
@@ -158,11 +158,15 @@ public class ScheduleService {
     /**
      * Document 형식 Aggregation으로 카테고리별 스케줄 집계
      */
-    private List<Document> getCategoryScheduleAggregation(String userId, User user) {
+    private List<Document> getCategoryScheduleAggregation(String userId, User user, int days) {
         // MongoDB Aggregation Pipeline을 Document 형식으로 구성
         List<Document> pipeline = Arrays.asList(
             // Stage 1: 사용자의 활성 스케줄 필터링
             new Document("$match", new Document()
+                .append("$and", Arrays.asList(
+                    new Document("startAt", new Document("$gte", LocalDateTime.now())),
+                    new Document("startAt", new Document("$lte", LocalDateTime.now().plusDays(days)))
+                ))
                 .append("userId", new ObjectId(userId))
                 .append("status", "active")),
             
@@ -283,7 +287,7 @@ public class ScheduleService {
         for (Map.Entry<String, Integer> entry : lowPriorityRanks.entrySet()) {
             String category = entry.getKey();
             Integer rank = entry.getValue();
-            double weight = LOW_PRIORITY_WEIGHT - (rank - 1) * 0.1; // 1순위 0.5, 2순위 0.4, 3순위 0.3
+            double weight = LOW_PRIORITY_WEIGHT - (rank - 1) * 0.1; // 1순위 0.3, 2순위 0.4, 3순위 0.5
             
             switchBranches.add(new Document()
                 .append("case", new Document("$eq", Arrays.asList("$categories", category)))
@@ -512,70 +516,70 @@ public class ScheduleService {
     }
 
 
-    @Scheduled(cron = "0 0 0 * * ?") // 매일 0시 0분 0초에 실행
-    public void sendDailyScheduleReminders() {
-        log.info("스케줄 알림 작업 시작 at {}", LocalDateTime.now());
-
-        // userService.findAll() 사용 (MongoRepository 기본 제공 메소드)
-        List<User> users = userService.findAll(); // 모든 사용자 조회
-
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startOfToday = now.truncatedTo(ChronoUnit.DAYS); // 오늘 0시 0분 0초 (시간 정보 제거)
-
-        for (User user : users) {
-            // 사용자에게 이메일 주소가 없으면 건너뛰기
-            if (user.getEmail() == null || user.getEmail().isEmpty()) {
-                log.warn("사용자 {} ({})의 이메일 주소가 없어 알림을 건너뜝니다.", user.getId(), user.getName());
-                continue;
-            }
-
-            // 사용자의 모든 활성 스케줄을 가져옴 (우선순위 계산 없이)
-            // getUserSchedulesWithPriority 대신 getUserSchedules 사용
-            List<ScheduleListDto> userSchedules = getUserSchedules(user.getId().toString());
-
-            // 알림 대상 스케줄 필터링 및 남은 날짜별로 그룹화 (0, 1, 3, 7일 후 시작)
-            Map<Integer, List<ScheduleListDto>> remindersByDays = userSchedules.stream()
-                    // 시작일자가 null이 아니고, 오늘 또는 이후 시작하는 스케줄만 필터링
-                    .filter(schedule -> schedule.getStartDate() != null && !schedule.getStartDate().isBefore(startOfToday))
-                    // 시작일자와 오늘 날짜의 차이(일 단위)를 계산하여 그룹핑
-                    .collect(Collectors.groupingBy(schedule -> {
-                        long days = ChronoUnit.DAYS.between(startOfToday, schedule.getStartDate().truncatedTo(ChronoUnit.DAYS));
-                        if (days == 0) return 0; // 오늘 시작
-                        if (days == 1) return 1; // 내일 시작
-                        if (days == 3) return 3; // 3일 후 시작
-                        if (days == 7) return 7; // 7일 후 시작
-                        return -1; // 알림 대상 날짜가 아니면 -1 그룹으로 (필터링되지 않은 경우)
-                    }));
-
-            // 각 알림 대상 날짜(0, 1, 3, 7일)별로 이메일 발송
-            int[] notificationDays = {0, 1, 3, 7}; // 알림 보낼 남은 날짜 기준
-            for (int days : notificationDays) {
-                // 해당 날짜에 해당하는 스케줄 목록을 가져옴. 없으면 빈 리스트 반환.
-                List<ScheduleListDto> schedulesToSend = remindersByDays.getOrDefault(days, Collections.emptyList());
-
-                // 해당 날짜에 스케줄이 있는 경우에만 이메일 발송
-                if (!schedulesToSend.isEmpty()) {
-                    // 요구사항에 맞춰 스케줄 정렬 (제목 알파벳 순으로만 정렬)
-                    // User 객체는 더 이상 정렬 로직에 사용되지 않지만, 메소드 시그니처 유지를 위해 전달
-                    sortSchedulesForEmail(schedulesToSend, user);
-
-                    // 이메일 제목 생성
-                    String subject = String.format("Priorify 스케줄 알림: %s 후 시작", (days == 0 ? "오늘" : (days == 1 ? "내일" : days + "일")));
-
-                    // 이메일 발송 시도
-                    try {
-                        emailService.sendScheduleReminderEmail(user.getEmail(), subject, schedulesToSend, days);
-                        log.info("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 완료 (스케줄 {}개)", user.getId(), user.getName(), days, schedulesToSend.size());
-                    } catch (javax.mail.MessagingException e) { // Spring Boot 2.7 이므로 javax.mail.MessagingException 임포트 사용
-                        log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 실패: {}", user.getId(), user.getName(), days, e.getMessage());
-                    } catch (Exception e) { // 혹시 모를 다른 예외 처리
-                        log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 중 예상치 못한 오류 발생: {}", user.getId(), user.getName(), days, e.getMessage());
-                    }
-                }
-            }
-        }
-        log.info("스케줄 알림 작업 종료");
-    }
+//    @Scheduled(cron = "0 0 0 * * ?") // 매일 0시 0분 0초에 실행
+//    public void sendDailyScheduleReminders() {
+//        log.info("스케줄 알림 작업 시작 at {}", LocalDateTime.now());
+//
+//        // userService.findAll() 사용 (MongoRepository 기본 제공 메소드)
+//        List<User> users = userService.findAll(); // 모든 사용자 조회
+//
+//        LocalDateTime now = LocalDateTime.now();
+//        LocalDateTime startOfToday = now.truncatedTo(ChronoUnit.DAYS); // 오늘 0시 0분 0초 (시간 정보 제거)
+//
+//        for (User user : users) {
+//            // 사용자에게 이메일 주소가 없으면 건너뛰기
+//            if (user.getEmail() == null || user.getEmail().isEmpty()) {
+//                log.warn("사용자 {} ({})의 이메일 주소가 없어 알림을 건너뜝니다.", user.getId(), user.getName());
+//                continue;
+//            }
+//
+//            // 사용자의 모든 활성 스케줄을 가져옴 (우선순위 계산 없이)
+//            // getUserSchedulesWithPriority 대신 getUserSchedules 사용
+//            List<ScheduleListDto> userSchedules = getUserSchedules(user.getId().toString());
+//
+//            // 알림 대상 스케줄 필터링 및 남은 날짜별로 그룹화 (0, 1, 3, 7일 후 시작)
+//            Map<Integer, List<ScheduleListDto>> remindersByDays = userSchedules.stream()
+//                    // 시작일자가 null이 아니고, 오늘 또는 이후 시작하는 스케줄만 필터링
+//                    .filter(schedule -> schedule.getStartDate() != null && !schedule.getStartDate().isBefore(startOfToday))
+//                    // 시작일자와 오늘 날짜의 차이(일 단위)를 계산하여 그룹핑
+//                    .collect(Collectors.groupingBy(schedule -> {
+//                        long days = ChronoUnit.DAYS.between(startOfToday, schedule.getStartDate().truncatedTo(ChronoUnit.DAYS));
+//                        if (days == 0) return 0; // 오늘 시작
+//                        if (days == 1) return 1; // 내일 시작
+//                        if (days == 3) return 3; // 3일 후 시작
+//                        if (days == 7) return 7; // 7일 후 시작
+//                        return -1; // 알림 대상 날짜가 아니면 -1 그룹으로 (필터링되지 않은 경우)
+//                    }));
+//
+//            // 각 알림 대상 날짜(0, 1, 3, 7일)별로 이메일 발송
+//            int[] notificationDays = {0, 1, 3, 7}; // 알림 보낼 남은 날짜 기준
+//            for (int days : notificationDays) {
+//                // 해당 날짜에 해당하는 스케줄 목록을 가져옴. 없으면 빈 리스트 반환.
+//                List<ScheduleListDto> schedulesToSend = remindersByDays.getOrDefault(days, Collections.emptyList());
+//
+//                // 해당 날짜에 스케줄이 있는 경우에만 이메일 발송
+//                if (!schedulesToSend.isEmpty()) {
+//                    // 요구사항에 맞춰 스케줄 정렬 (제목 알파벳 순으로만 정렬)
+//                    // User 객체는 더 이상 정렬 로직에 사용되지 않지만, 메소드 시그니처 유지를 위해 전달
+//                    sortSchedulesForEmail(schedulesToSend, user);
+//
+//                    // 이메일 제목 생성
+//                    String subject = String.format("Priorify 스케줄 알림: %s 후 시작", (days == 0 ? "오늘" : (days == 1 ? "내일" : days + "일")));
+//
+//                    // 이메일 발송 시도
+//                    try {
+//                        emailService.sendScheduleReminderEmail(user.getEmail(), subject, schedulesToSend, days);
+//                        log.info("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 완료 (스케줄 {}개)", user.getId(), user.getName(), days, schedulesToSend.size());
+//                    } catch (javax.mail.MessagingException e) { // Spring Boot 2.7 이므로 javax.mail.MessagingException 임포트 사용
+//                        log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 실패: {}", user.getId(), user.getName(), days, e.getMessage());
+//                    } catch (Exception e) { // 혹시 모를 다른 예외 처리
+//                        log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 중 예상치 못한 오류 발생: {}", user.getId(), user.getName(), days, e.getMessage());
+//                    }
+//                }
+//            }
+//        }
+//        log.info("스케줄 알림 작업 종료");
+//    }
 
 
 

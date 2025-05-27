@@ -1,15 +1,14 @@
 package com.dku.opensource.priorify.priorify_backend.controller;
 
+import com.dku.opensource.priorify.priorify_backend.service.EmailService;
 import com.dku.opensource.priorify.priorify_backend.service.PriorityService;
 import com.dku.opensource.priorify.priorify_backend.dto.PriorityDto;
-import com.dku.opensource.priorify.priorify_backend.model.CategoryPriority;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.bson.types.ObjectId;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/priorities")
@@ -37,4 +36,5 @@ public class PriorityController {
         String userId = (String) request.getAttribute("userId");
         return ResponseEntity.ok(priorityService.getPriorities(userId));
     }
+
 } 

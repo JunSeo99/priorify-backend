@@ -28,9 +28,12 @@ public class ScheduleController {
      * 사용자의 스케줄 Node Graph 조회
      */
     @GetMapping("/graph")
-    public ResponseEntity<ScheduleGraphResponseDto> getScheduleGraph(HttpServletRequest request) {
+    public ResponseEntity<ScheduleGraphResponseDto> getScheduleGraph(
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "7") int days
+    ) {
         String userId = (String) request.getAttribute("userId");
-        ScheduleGraphResponseDto graph = scheduleService.getScheduleGraph(userId);
+        ScheduleGraphResponseDto graph = scheduleService.getScheduleGraph(userId, days);
         return ResponseEntity.ok(graph);
     }
 

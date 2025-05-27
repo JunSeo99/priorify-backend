@@ -1,5 +1,6 @@
 package com.dku.opensource.priorify.priorify_backend.controller;
 
+import com.dku.opensource.priorify.priorify_backend.service.EmailService;
 import com.dku.opensource.priorify.priorify_backend.service.GoogleAPIService;
 import com.dku.opensource.priorify.priorify_backend.service.UserService;
 import com.dku.opensource.priorify.priorify_backend.dto.UserResponseDto;
@@ -10,6 +11,7 @@ import com.dku.opensource.priorify.priorify_backend.security.JwtTokenProvider;
 import lombok.extern.slf4j.Slf4j;
 
 import org.bson.Document;
+import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -49,6 +51,9 @@ public class AuthController {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private EmailService emailService;
+
+    @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
@@ -57,7 +62,12 @@ public class AuthController {
     @Autowired
     private GoogleAPIService googleAPIService;
 
-    // 구글 로그인으로 처리하기 때문에 기존 로그인/회원가입 제거
+    @GetMapping("test")
+    public ResponseEntity<String> getTest() {
+        return ResponseEntity.ok(emailService.test());
+    }
+
+
 
     // 구글 로그인 처리
     @PostMapping("/google")
@@ -215,7 +225,7 @@ public class AuthController {
                     String userId = userResponseDto.getUserId();
                     String googleAccessToken = userResponseDto.getGoogleAccessToken();
                     
-                    // 효용 없는 Rx 제거
+                    // 효용 없는 Rx 제거 -> 해결! 
                     CalendarSyncResultDto result = googleAPIService.syncGoogleCalendar(userId, googleAccessToken);
                     log.info("캘린더 동기화 완료: {}", result.getMessage());
                 }
