@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import javax.mail.MessagingException;
+// import javax.mail.MessagingException;
 
 @Service
 @RequiredArgsConstructor
@@ -165,28 +165,23 @@ public class ScheduleService {
             new Document("$match", new Document()
                 .append("$and", Arrays.asList(
                     new Document("startAt", new Document("$gte", LocalDateTime.now())),
-                    new Document("startAt", new Document("$lte", LocalDateTime.now().plusDays(days)))
-                ))
-                .append("userId", new ObjectId(userId))
-                .append("status", "active")),
-            
-            // Stage 2: 원본 categories 정보를 보존하면서 unwind
+                    new Document("startAt", new Document("$lte", LocalDateTime.now().plusDays(days))),
+                    new Document("userId", new ObjectId(userId)),
+                    new Document("$or", Arrays.asList(
+                        new Document("status", "active"),
+                        new Document("status", "completed")
+                    ))
+                ))),
             new Document("$addFields", new Document()
-                .append("originalCategories", "$categories")), // 원본 categories 보존
-            
-            // Stage 3: categories 배열을 풀어서 각 카테고리별로 문서 생성
+                .append("originalCategories", "$categories")),
             new Document("$unwind", new Document()
                 .append("path", "$categories")
                 .append("preserveNullAndEmptyArrays", true)),
-            
-            // Stage 4: 중요도 계산 추가
             new Document("$addFields", new Document()
                 .append("urgencyScore", createUrgencyScoreExpression())
                 .append("categoryWeight", createCategoryWeightExpression(user))),
             new Document("$addFields", new Document()
                 .append("priority", new Document("$multiply", Arrays.asList("$urgencyScore", "$categoryWeight")))),
-            
-            // Stage 5: 카테고리별 그룹화 (원본 categories 정보 포함)
             new Document("$group", new Document()
                 .append("_id", new Document("$ifNull", Arrays.asList("$categories", "기타2")))
                 .append("schedules", new Document("$push", new Document()
@@ -202,8 +197,6 @@ public class ScheduleService {
                 .append("scheduleCount", new Document("$sum", 1))
                 .append("avgPriority", new Document("$avg", "$priority"))
                 .append("totalPriority", new Document("$sum", "$priority"))),
-            
-            // Stage 6: 스케줄 수가 많은 카테고리 순으로 정렬
             new Document("$sort", new Document("scheduleCount", -1))
         );
         
@@ -513,6 +506,15 @@ public class ScheduleService {
                     return createScheduleListDto(doc, categories);
                 })
                 .collect(Collectors.toList());
+    }
+
+    public void toggleScheduleStatus(String userId, String scheduleId) {
+        Schedule schedule = mongoTemplate.findById(scheduleId, Schedule.class);
+        if (schedule == null) {
+            throw new RuntimeException("스케줄을 찾을 수 없습니다.");
+        }
+        schedule.setStatus(schedule.getStatus().equals("active") ? "completed" : "active");
+        mongoTemplate.save(schedule);
     }
 
 

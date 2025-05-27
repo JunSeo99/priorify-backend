@@ -136,7 +136,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        // scheduleService.toggleScheduleStatus(userId, scheduleId);
+        scheduleService.toggleScheduleStatus(userId, scheduleId);
         return ResponseEntity.ok(null);
     }
 } 
