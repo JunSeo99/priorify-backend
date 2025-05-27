@@ -30,8 +30,9 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         String userId = (String) request.getAttribute("userId");
-        Map<String, Object> analytics = analyticsService.getCategoryAnalytics(new ObjectId(userId), start, end);
-        return ResponseEntity.ok(analytics);
+        // Map<String, Object> analytics = analyticsService.getCategoryAnalytics(new ObjectId(userId), start, end);
+        // return ResponseEntity.ok(analytics);
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/productivity")
@@ -40,7 +41,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         String userId = (String) request.getAttribute("userId");
-        Map<String, Object> metrics = analyticsService.getProductivityMetrics(new ObjectId(userId), start, end);
-        return ResponseEntity.ok(metrics);
+        // Map<String, Object> metrics = analyticsService.getProductivityMetrics(new ObjectId(userId), start, end);
+        return ResponseEntity.ok(null);
     }
 } 

@@ -1,6 +1,8 @@
 package com.dku.opensource.priorify.priorify_backend.controller;
 
 import com.dku.opensource.priorify.priorify_backend.service.ScheduleService;
+import com.dku.opensource.priorify.priorify_backend.dto.ScheduleGraphResponseDto;
+import com.dku.opensource.priorify.priorify_backend.dto.ScheduleListDto;
 import com.dku.opensource.priorify.priorify_backend.model.Schedule;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -22,51 +24,98 @@ public class ScheduleController {
         this.scheduleService = scheduleService;
     }
 
+    /**
+     * 사용자의 스케줄 Node Graph 조회
+     */
+    @GetMapping("/graph")
+    public ResponseEntity<ScheduleGraphResponseDto> getScheduleGraph(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        ScheduleGraphResponseDto graph = scheduleService.getScheduleGraph(userId);
+        return ResponseEntity.ok(graph);
+    }
+
+    /**
+     * 스케줄 생성
+     */
     @PostMapping
     public ResponseEntity<Schedule> createSchedule(
             HttpServletRequest request,
             @Valid @RequestBody Schedule schedule) {
         String userId = (String) request.getAttribute("userId");
-        Schedule createdSchedule = scheduleService.createSchedule(new ObjectId(userId), schedule);
+        schedule.setUserId(new ObjectId(userId));
+        Schedule createdSchedule = scheduleService.createSchedule(schedule);
         return ResponseEntity.ok(createdSchedule);
     }
 
+    /**
+     * 스케줄 업데이트
+     */
     @PutMapping("/{scheduleId}")
     public ResponseEntity<Schedule> updateSchedule(
             HttpServletRequest request,
             @PathVariable String scheduleId,
             @Valid @RequestBody Schedule schedule) {
         String userId = (String) request.getAttribute("userId");
-        Schedule updatedSchedule = scheduleService.updateSchedule(new ObjectId(userId), scheduleId, schedule);
+        
+        // 기존 스케줄 조회 및 권한 확인
+        Schedule existingSchedule = scheduleService.getScheduleById(scheduleId);
+        if (existingSchedule == null || !existingSchedule.getUserId().toString().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        schedule.setId(scheduleId);
+        schedule.setUserId(new ObjectId(userId));
+        Schedule updatedSchedule = scheduleService.updateSchedule(schedule);
         return ResponseEntity.ok(updatedSchedule);
     }
 
+    /**
+     * 스케줄 삭제
+     */
     @DeleteMapping("/{scheduleId}")
     public ResponseEntity<?> deleteSchedule(
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        scheduleService.deleteSchedule(new ObjectId(userId), scheduleId);
-        return ResponseEntity.ok("일정이 삭제되었습니다.");
+        
+        // 기존 스케줄 조회 및 권한 확인
+        Schedule existingSchedule = scheduleService.getScheduleById(scheduleId);
+        if (existingSchedule == null || !existingSchedule.getUserId().toString().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // soft delete (상태를 inactive로 변경)
+        existingSchedule.setStatus("inactive");
+        scheduleService.updateSchedule(existingSchedule);
+        
+        return ResponseEntity.ok().build();
     }
 
+    /**
+     * 사용자의 모든 스케줄 조회
+     */
+    @GetMapping
+    public ResponseEntity<List<ScheduleListDto>> getUserSchedules(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        List<ScheduleListDto> schedules = scheduleService.getUserSchedules(userId);
+        return ResponseEntity.ok(schedules);
+    }
+
+    /**
+     * 특정 스케줄 상세 조회
+     */
     @GetMapping("/{scheduleId}")
     public ResponseEntity<Schedule> getSchedule(
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        Schedule schedule = scheduleService.findScheduleByIdAndUser(scheduleId, new ObjectId(userId));
-        if (schedule == null) {
+        
+        Schedule schedule = scheduleService.getScheduleById(scheduleId);
+        if (schedule == null || !schedule.getUserId().toString().equals(userId)) {
             return ResponseEntity.notFound().build();
         }
+        
         return ResponseEntity.ok(schedule);
-    }
-
-    @GetMapping
-    public ResponseEntity<List<Schedule>> getAllSchedules(HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        List<Schedule> schedules = scheduleService.findAllSchedulesByUser(new ObjectId(userId));
-        return ResponseEntity.ok(schedules);
     }
 
     @GetMapping("/range")
@@ -75,8 +124,8 @@ public class ScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         String userId = (String) request.getAttribute("userId");
-        List<Schedule> schedules = scheduleService.findSchedulesByDateRange(new ObjectId(userId), start, end);
-        return ResponseEntity.ok(schedules);
+        // List<Schedule> schedules = scheduleService.findSchedulesByDateRange(new ObjectId(userId), start, end);
+        return ResponseEntity.ok(null);
     }
 
     @PatchMapping("/{scheduleId}/toggle-completion")
@@ -84,7 +133,7 @@ public class ScheduleController {
             HttpServletRequest request,
             @PathVariable String scheduleId) {
         String userId = (String) request.getAttribute("userId");
-        scheduleService.toggleScheduleCompletion(new ObjectId(userId), scheduleId);
-        return ResponseEntity.ok("일정 완료 상태가 변경되었습니다.");
+        // scheduleService.toggleScheduleStatus(userId, scheduleId);
+        return ResponseEntity.ok(null);
     }
 } 
