@@ -14,6 +14,20 @@ spring:
               - email
               - profile
 
+spring:
+  mail:
+    host: smtp.gmail.com # 1
+    port: 587 # 2
+    username: ${MAIL_USERNAME} # 3
+    password: ${MAIL_PASSWORD} # 4
+    properties:
+      mail:
+        smtp:
+          auth: true # 5
+          timeout: 5000 # 6
+          starttls:
+            enable: true # 7
+
 jwt:
   secret: ${JWT_SECRET:fffffff}
   expiration: 86400000 # 24시간
