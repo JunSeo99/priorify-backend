@@ -31,6 +31,7 @@ Priorify는 사용자의 Google 캘린더 일정을 불러와
 | 구성 요소       | 기술/라이브러리                                    |
 | -------------- | -------------------------------------------------- |
 | 주요 프레임 워크    | Spring Boot, Spring Data MongoDB, RxJava      |
+| AI모델    | Text2Vec (e.g., Ko-SBERT), NER (KoELECTRA)             |
 | 데이터베이스    | MongoDB Atlas (Vector Search)                      |
 | CI/CD          | GitHub Actions → Jenkins → AWS EC2 (Docker)        |
 | 인증/연동      | OAuth2 (Google Login & Calendar API)               |
@@ -38,7 +39,7 @@ Priorify는 사용자의 Google 캘린더 일정을 불러와
 ### 🚀 필수 기능
 
 * **한 줄의 문장 입력만으로 Task 등록**
-* **Fine-tuned LLaMA API로 우선순위 자동 분류**
+* **Text2Vec과 NER 모델을 활용한 스케줄 자동 카테고리 분류**
 * **D3.js를 이용해 중요도에 따라 크기·색상으로 표시**
 * **Spring Boot RESTful API와 MongoDB storage on AWS EC2**
 * **CI/CD**: GitHub Webhook & AWS CodeDeploy Agent로 자동화된 Deployment
