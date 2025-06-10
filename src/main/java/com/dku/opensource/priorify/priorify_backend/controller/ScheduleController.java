@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.dku.opensource.priorify.priorify_backend.service.EmailService;
+import com.dku.opensource.priorify.priorify_backend.service.GoogleAPIService;
+
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -23,16 +25,21 @@ import lombok.RequiredArgsConstructor;
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
-    
+    private final GoogleAPIService googleAPIService;
     /**
      * 사용자의 스케줄 Node Graph 조회
      */
+
     @GetMapping("/graph")
     public ResponseEntity<ScheduleGraphResponseDto> getScheduleGraph(
             HttpServletRequest request,
+            @RequestParam String googleAccessToken,
             @RequestParam(defaultValue = "7") int days
     ) {
         String userId = (String) request.getAttribute("userId");
+        if (googleAccessToken != null) {
+            googleAPIService.syncGoogleCalendar(userId, googleAccessToken);
+        }
         ScheduleGraphResponseDto graph = scheduleService.getScheduleGraph(userId, days);
         return ResponseEntity.ok(graph);
     }
