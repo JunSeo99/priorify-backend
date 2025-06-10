@@ -103,6 +103,7 @@ public class AuthController {
                 responseBody.put("user", UserResponseDto.builder()
                         .userId(user.getId().toHexString())
                         .name(user.getName())
+                        .googleAccessToken(googleLoginRequest.getIdToken())
                         .build());
                 
                 return ResponseEntity.ok().headers(headers).body(responseBody);
