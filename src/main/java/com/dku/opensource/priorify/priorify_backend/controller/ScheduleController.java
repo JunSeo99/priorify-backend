@@ -33,7 +33,7 @@ public class ScheduleController {
     @GetMapping("/graph")
     public ResponseEntity<ScheduleGraphResponseDto> getScheduleGraph(
             HttpServletRequest request,
-            @RequestParam String googleAccessToken,
+            @RequestParam(required = false) String googleAccessToken,
             @RequestParam(defaultValue = "7") int days
     ) {
         String userId = (String) request.getAttribute("userId");
