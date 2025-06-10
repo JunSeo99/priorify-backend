@@ -14,16 +14,16 @@ import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.dku.opensource.priorify.priorify_backend.service.EmailService;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/schedules")
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
-
-    public ScheduleController(ScheduleService scheduleService) {
-        this.scheduleService = scheduleService;
-    }
-
+    
     /**
      * 사용자의 스케줄 Node Graph 조회
      */
@@ -35,6 +35,17 @@ public class ScheduleController {
         String userId = (String) request.getAttribute("userId");
         ScheduleGraphResponseDto graph = scheduleService.getScheduleGraph(userId, days);
         return ResponseEntity.ok(graph);
+    }
+
+    @PostMapping("/mail/test")
+    public ResponseEntity<String> sendMailTest(
+            HttpServletRequest request,
+            @RequestParam String email,
+            @RequestParam String subject,
+            @RequestParam String text
+    ) {
+        scheduleService.sendDailyScheduleReminders();
+        return ResponseEntity.ok("test");
     }
 
     /**

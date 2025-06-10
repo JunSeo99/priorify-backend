@@ -31,21 +31,4 @@ public class ControllerTest {
     @Autowired
     EmailService emailService;
 
-
-    @Test
-    public void testErrorController() throws Exception {
-        System.out.println("testErrorController");
-        String timeMin = LocalDateTime.now().minusMonths(1)
-                    .atZone(ZoneId.systemDefault())
-                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-        System.out.println("timeMin: " + timeMin);
-    }
-
-
-    @Test
-    public void test() {
-        emailService.test();
-    }
-
 }

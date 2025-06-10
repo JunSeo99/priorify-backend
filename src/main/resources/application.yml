@@ -3,6 +3,17 @@ spring:
     mongodb:
       uri: ${MONGOURI}
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.debug: true
+      mail.smtp.connectiontimeout: 1000 #1초
+      mail.starttls.enable: true
+      mail.smtp.auth: true
+
   security:
     oauth2:
       client:
@@ -14,19 +25,6 @@ spring:
               - email
               - profile
 
-spring:
-  mail:
-    host: smtp.gmail.com # 1
-    port: 587 # 2
-    username: ${MAIL_USERNAME} # 3
-    password: ${MAIL_PASSWORD} # 4
-    properties:
-      mail:
-        smtp:
-          auth: true # 5
-          timeout: 5000 # 6
-          starttls:
-            enable: true # 7
 
 jwt:
   secret: ${JWT_SECRET:fffffff}

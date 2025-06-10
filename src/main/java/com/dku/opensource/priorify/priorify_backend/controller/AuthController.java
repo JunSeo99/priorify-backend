@@ -62,12 +62,6 @@ public class AuthController {
     @Autowired
     private GoogleAPIService googleAPIService;
 
-    @GetMapping("test")
-    public ResponseEntity<String> getTest() {
-        return ResponseEntity.ok(emailService.test());
-    }
-
-
 
     // 구글 로그인 처리
     @PostMapping("/google")

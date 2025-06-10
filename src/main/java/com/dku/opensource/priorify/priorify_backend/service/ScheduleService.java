@@ -13,6 +13,9 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.bson.Document;
@@ -23,7 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-// import javax.mail.MessagingException;
+import javax.mail.MessagingException;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +43,10 @@ public class ScheduleService {
     private static final double HIGH_PRIORITY_WEIGHT = 2.5;
     private static final double LOW_PRIORITY_WEIGHT = 0.5;
     private static final double SIMILARITY_THRESHOLD = 0.6;
+    
+    // 배치 처리 상수
+    private static final int BATCH_SIZE = 5; // 한 번에 처리할 사용자 수
+    private static final long BATCH_DELAY_MS = 1000; // 배치 간 지연 시간 (밀리초)
 
     // 스케줄 생성
     public Schedule createSchedule(Schedule schedule) {
@@ -518,87 +525,366 @@ public class ScheduleService {
     }
 
 
-//    @Scheduled(cron = "0 0 0 * * ?") // 매일 0시 0분 0초에 실행
-//    public void sendDailyScheduleReminders() {
-//        log.info("스케줄 알림 작업 시작 at {}", LocalDateTime.now());
-//
-//        // userService.findAll() 사용 (MongoRepository 기본 제공 메소드)
-//        List<User> users = userService.findAll(); // 모든 사용자 조회
-//
-//        LocalDateTime now = LocalDateTime.now();
-//        LocalDateTime startOfToday = now.truncatedTo(ChronoUnit.DAYS); // 오늘 0시 0분 0초 (시간 정보 제거)
-//
-//        for (User user : users) {
-//            // 사용자에게 이메일 주소가 없으면 건너뛰기
-//            if (user.getEmail() == null || user.getEmail().isEmpty()) {
-//                log.warn("사용자 {} ({})의 이메일 주소가 없어 알림을 건너뜝니다.", user.getId(), user.getName());
-//                continue;
-//            }
-//
-//            // 사용자의 모든 활성 스케줄을 가져옴 (우선순위 계산 없이)
-//            // getUserSchedulesWithPriority 대신 getUserSchedules 사용
-//            List<ScheduleListDto> userSchedules = getUserSchedules(user.getId().toString());
-//
-//            // 알림 대상 스케줄 필터링 및 남은 날짜별로 그룹화 (0, 1, 3, 7일 후 시작)
-//            Map<Integer, List<ScheduleListDto>> remindersByDays = userSchedules.stream()
-//                    // 시작일자가 null이 아니고, 오늘 또는 이후 시작하는 스케줄만 필터링
-//                    .filter(schedule -> schedule.getStartDate() != null && !schedule.getStartDate().isBefore(startOfToday))
-//                    // 시작일자와 오늘 날짜의 차이(일 단위)를 계산하여 그룹핑
-//                    .collect(Collectors.groupingBy(schedule -> {
-//                        long days = ChronoUnit.DAYS.between(startOfToday, schedule.getStartDate().truncatedTo(ChronoUnit.DAYS));
-//                        if (days == 0) return 0; // 오늘 시작
-//                        if (days == 1) return 1; // 내일 시작
-//                        if (days == 3) return 3; // 3일 후 시작
-//                        if (days == 7) return 7; // 7일 후 시작
-//                        return -1; // 알림 대상 날짜가 아니면 -1 그룹으로 (필터링되지 않은 경우)
-//                    }));
-//
-//            // 각 알림 대상 날짜(0, 1, 3, 7일)별로 이메일 발송
-//            int[] notificationDays = {0, 1, 3, 7}; // 알림 보낼 남은 날짜 기준
-//            for (int days : notificationDays) {
-//                // 해당 날짜에 해당하는 스케줄 목록을 가져옴. 없으면 빈 리스트 반환.
-//                List<ScheduleListDto> schedulesToSend = remindersByDays.getOrDefault(days, Collections.emptyList());
-//
-//                // 해당 날짜에 스케줄이 있는 경우에만 이메일 발송
-//                if (!schedulesToSend.isEmpty()) {
-//                    // 요구사항에 맞춰 스케줄 정렬 (제목 알파벳 순으로만 정렬)
-//                    // User 객체는 더 이상 정렬 로직에 사용되지 않지만, 메소드 시그니처 유지를 위해 전달
-//                    sortSchedulesForEmail(schedulesToSend, user);
-//
-//                    // 이메일 제목 생성
-//                    String subject = String.format("Priorify 스케줄 알림: %s 후 시작", (days == 0 ? "오늘" : (days == 1 ? "내일" : days + "일")));
-//
-//                    // 이메일 발송 시도
-//                    try {
-//                        emailService.sendScheduleReminderEmail(user.getEmail(), subject, schedulesToSend, days);
-//                        log.info("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 완료 (스케줄 {}개)", user.getId(), user.getName(), days, schedulesToSend.size());
-//                    } catch (javax.mail.MessagingException e) { // Spring Boot 2.7 이므로 javax.mail.MessagingException 임포트 사용
-//                        log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 실패: {}", user.getId(), user.getName(), days, e.getMessage());
-//                    } catch (Exception e) { // 혹시 모를 다른 예외 처리
-//                        log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 중 예상치 못한 오류 발생: {}", user.getId(), user.getName(), days, e.getMessage());
-//                    }
-//                }
-//            }
-//        }
-//        log.info("스케줄 알림 작업 종료");
-//    }
+   @Scheduled(cron = "0 0 0 * * ?") // 매일 0시 0분 0초에 실행
+   public void sendDailyScheduleReminders() {
+       log.info("스케줄 알림 배치 작업 시작 at {}", LocalDateTime.now());
+
+       long totalUsers = getTotalUserCount();
+       log.info("처리 대상 총 사용자 수: {}", totalUsers);
+       
+       if (totalUsers == 0) {
+           log.info("처리할 사용자가 없습니다.");
+           return;
+       }
+
+       LocalDateTime now = LocalDateTime.now();
+       LocalDateTime startOfToday = now.truncatedTo(ChronoUnit.DAYS);
+       final double HIGH_PRIORITY_THRESHOLD = 3.0; // 중요 스케줄 알림 기준 가중치
+
+       int totalBatches = (int) Math.ceil((double) totalUsers / BATCH_SIZE);
+       int totalSuccessCount = 0;
+       int totalFailureCount = 0;
+
+       for (int batchNumber = 0; batchNumber < totalBatches; batchNumber++) {
+           try {
+               Page<User> userPage = getUsersInBatch(batchNumber, BATCH_SIZE);
+               List<User> users = userPage.getContent();
+               
+               if (users.isEmpty()) {
+                   log.info("배치 {}에 사용자가 없습니다. 배치 처리 종료.", batchNumber + 1);
+                   break;
+               }
+
+               int batchSuccessCount = 0;
+               int batchFailureCount = 0;
+
+               log.info("배치 {}/{} 처리 시작 (사용자 {}명)", batchNumber + 1, totalBatches, users.size());
+
+               for (User user : users) {
+                   try {
+                       if (user.getEmail() == null || user.getEmail().isEmpty()) {
+                           log.warn("사용자 {} ({})의 이메일 주소가 없어 알림을 건너뜁니다.", user.getId(), user.getName());
+                           batchFailureCount++;
+                           continue;
+                       }
+
+                       List<ScheduleListDto> userSchedules = getUserSchedules(user.getId().toString());
+
+                       // 1. 중요도 높은 스케줄 알림 (오늘 또는 내일 시작/마감되는 스케줄 중)
+                       List<ScheduleListDto> highPrioritySchedules = userSchedules.stream()
+                               .filter(schedule -> schedule.getPriority() != null && schedule.getPriority() >= HIGH_PRIORITY_THRESHOLD)
+                               .filter(schedule -> schedule.getStartDate() != null &&
+                                       (schedule.getStartDate().toLocalDate().isEqual(startOfToday.toLocalDate()) || // 오늘 시작
+                                        schedule.getStartDate().toLocalDate().isEqual(startOfToday.toLocalDate().plusDays(1)))) // 내일 시작
+                               .collect(Collectors.toList());
+                       
+                       boolean sentHighPriorityEmail = false;
+                       if (!highPrioritySchedules.isEmpty()) {
+                           sortSchedulesForEmail(highPrioritySchedules, user); // 중요도 높은 순, 다음 제목 순으로 정렬
+                           String subject = String.format("Priorify: 오늘/내일의 중요 스케줄! (%s)", emailService.todayDate());
+                           try {
+                               int representativeDaysRemaining = highPrioritySchedules.stream()
+                                                                    .mapToInt(s -> (int)ChronoUnit.DAYS.between(startOfToday, s.getStartDate().truncatedTo(ChronoUnit.DAYS)))
+                                                                    .min().orElse(0);
+
+                               emailService.sendEmailNotice(user.getEmail(), subject, highPrioritySchedules, representativeDaysRemaining);
+                               log.debug("사용자 {} ({})에게 중요 스케줄 알림 이메일 발송 완료 (스케줄 {}개)", user.getId(), user.getName(), highPrioritySchedules.size());
+                               sentHighPriorityEmail = true;
+                           } catch (MessagingException e) {
+                               log.error("사용자 {} ({})에게 중요 스케줄 알림 이메일 발송 실패: {}", user.getId(), user.getName(), e.getMessage());
+                               batchFailureCount++;
+                               continue;
+                           }
+                       }
+
+                       // 2. 기존의 마감 임박 스케줄 알림 (0, 1, 3, 7일 후 시작)
+                       Map<Integer, List<ScheduleListDto>> remindersByDays = userSchedules.stream()
+                               .filter(schedule -> schedule.getStartDate() != null && !schedule.getStartDate().isBefore(startOfToday))
+                               .collect(Collectors.groupingBy(schedule -> {
+                                   long days = ChronoUnit.DAYS.between(startOfToday, schedule.getStartDate().truncatedTo(ChronoUnit.DAYS));
+                                   if (days == 0) return 0; // 오늘 시작
+                                   if (days == 1) return 1; // 내일 시작
+                                   if (days == 3) return 3; // 3일 후 시작
+                                   if (days == 7) return 7; // 7일 후 시작
+                                   return -1; // 알림 대상 날짜가 아니면 -1 그룹으로 (필터링되지 않은 경우)
+                               }));
+
+                       int[] notificationDays = {0, 1, 3, 7}; // 알림 보낼 남은 날짜 기준
+                       boolean sentAnyEmail = sentHighPriorityEmail;
+                       
+                       for (int days : notificationDays) {
+                           List<ScheduleListDto> schedulesToSend = remindersByDays.getOrDefault(days, Collections.emptyList());
+
+                           // 중요도 알림에서 이미 보낸 스케줄 제외 로직 (ID 기반)
+                           List<String> highPriorityScheduleIds = highPrioritySchedules.stream().map(ScheduleListDto::getId).collect(Collectors.toList());
+                           schedulesToSend = schedulesToSend.stream()
+                                                .filter(s -> !highPriorityScheduleIds.contains(s.getId()))
+                                                .collect(Collectors.toList());
+
+                           if (!schedulesToSend.isEmpty()) {
+                               sortSchedulesForEmail(schedulesToSend, user);
+                               String subject = String.format("Priorify 스케줄 알림: %s 시작", (days == 0 ? "오늘" : (days == 1 ? "내일" : days + "일 후")));
+                               try {
+                                   emailService.sendEmailNotice(user.getEmail(), subject, schedulesToSend, days);
+                                   log.debug("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 완료 (스케줄 {}개)", user.getId(), user.getName(), days, schedulesToSend.size());
+                                   sentAnyEmail = true;
+                               } catch (javax.mail.MessagingException e) { 
+                                   log.error("사용자 {} ({})에게 {}일 후 스케줄 알림 이메일 발송 실패: {}", user.getId(), user.getName(), days, e.getMessage());
+                                   batchFailureCount++;
+                               }
+                           }
+                       }
+                       
+                       if (sentAnyEmail) {
+                           batchSuccessCount++;
+                       } else {
+                           batchSuccessCount++; // 보낼 스케줄이 없는 것도 정상 처리로 간주
+                       }
+                       
+                   } catch (Exception e) { 
+                       log.error("사용자 {} ({})에게 스케줄 알림 중 예상치 못한 오류 발생: {}", user.getId(), user.getName(), e.getMessage());
+                       batchFailureCount++;
+                   }
+               }
+
+               totalSuccessCount += batchSuccessCount;
+               totalFailureCount += batchFailureCount;
+               
+               logBatchStatistics(batchNumber + 1, users.size(), batchSuccessCount, batchFailureCount, totalUsers);
+
+               // 마지막 배치가 아니면 지연 시간 추가
+               if (batchNumber < totalBatches - 1) {
+                   waitBetweenBatches();
+               }
+
+           } catch (Exception e) {
+               log.error("배치 {} 처리 중 치명적 오류 발생: {}", batchNumber + 1, e.getMessage());
+               totalFailureCount += BATCH_SIZE; // 배치 전체를 실패로 처리
+           }
+       }
+       
+       log.info("스케줄 알림 배치 작업 완료 - 총 성공: {}, 총 실패: {}, 총 사용자: {}", 
+               totalSuccessCount, totalFailureCount, totalUsers);
+   }
 
 
 
     /**
      * 알림 이메일 발송을 위한 스케줄 목록 정렬 로직
      * 정렬 기준:
-     * (남은 날짜는 이미 sendDailyScheduleReminders에서 그룹화 됨)
-     * 1. 제목 알파벳 순 (오름차순)
+     * 1. 중요도(priority) 높은 순 (내림차순)
+     * 2. 제목 알파벳 순 (오름차순)
      * 이 메소드는 sendDailyScheduleReminders에서 호출되며, 이미 특정 남은 날짜 그룹에 속한 스케줄 리스트를 받습니다.
      */
     private void sortSchedulesForEmail(List<ScheduleListDto> schedules, User user) {
-
-        // 남은 날짜별 그룹 내에서 제목 알파벳 순으로만 정렬
         schedules.sort(Comparator
-                // 1. 제목 알파벳 순 오름차순 (null 처리 포함)
-                // 제목이 null인 경우 빈 문자열("")로 간주하여 비교합니다.
-                .comparing(schedule -> schedule.getTitle() != null ? schedule.getTitle() : "", Comparator.naturalOrder())
+                // 1. 중요도(priority) 내림차순 (null 처리: null은 낮은 우선순위로)
+                .comparing(ScheduleListDto::getPriority, Comparator.nullsLast(Comparator.reverseOrder()))
+                // 2. 제목 알파벳 순 오름차순 (null 처리 포함)
+                .thenComparing(schedule -> schedule.getTitle() != null ? schedule.getTitle() : "", Comparator.naturalOrder())
         );
     }
+
+    /**
+     * 상위 우선순위 스케줄 알림 발송 (배치 처리)
+     * getCategoryScheduleAggregation과 동일한 가중치 알고리즘 사용
+     */
+    @Scheduled(cron = "0 0 9 * * ?") // 매일 오전 9시에 실행
+    public void sendTopPriorityScheduleReminders() {
+        log.info("상위 우선순위 스케줄 알림 배치 작업 시작 at {}", LocalDateTime.now());
+
+        long totalUsers = getTotalUserCount();
+        log.info("처리 대상 총 사용자 수: {}", totalUsers);
+        
+        if (totalUsers == 0) {
+            log.info("처리할 사용자가 없습니다.");
+            return;
+        }
+
+        int totalBatches = (int) Math.ceil((double) totalUsers / BATCH_SIZE);
+        int totalSuccessCount = 0;
+        int totalFailureCount = 0;
+
+        for (int batchNumber = 0; batchNumber < totalBatches; batchNumber++) {
+            try {
+                Page<User> userPage = getUsersInBatch(batchNumber, BATCH_SIZE);
+                List<User> users = userPage.getContent();
+                
+                if (users.isEmpty()) {
+                    log.info("배치 {}에 사용자가 없습니다. 배치 처리 종료.", batchNumber + 1);
+                    break;
+                }
+
+                int batchSuccessCount = 0;
+                int batchFailureCount = 0;
+
+                log.info("배치 {}/{} 처리 시작 (사용자 {}명)", batchNumber + 1, totalBatches, users.size());
+
+                for (User user : users) {
+                    try {
+                        if (user.getEmail() == null || user.getEmail().isEmpty()) {
+                            log.warn("사용자 {} ({})의 이메일 주소가 없어 상위 우선순위 알림을 건너뜁니다.", user.getId(), user.getName());
+                            batchFailureCount++;
+                            continue;
+                        }
+
+                        // 사용자의 상위 2개 우선순위 스케줄 조회
+                        List<ScheduleListDto> topPrioritySchedules = getTopPrioritySchedulesWithWeights(user.getId().toString(), user, 2);
+                        
+                        if (!topPrioritySchedules.isEmpty()) {
+                            emailService.sendTopPriorityScheduleNotice(user.getEmail(), user.getName(), topPrioritySchedules);
+                            log.debug("사용자 {} ({})에게 상위 우선순위 스케줄 알림 이메일 발송 완료 (스케줄 {}개)", 
+                                    user.getId(), user.getName(), topPrioritySchedules.size());
+                            batchSuccessCount++;
+                        } else {
+                            log.debug("사용자 {} ({})에게 발송할 상위 우선순위 스케줄이 없습니다.", user.getId(), user.getName());
+                            batchSuccessCount++; // 성공으로 카운트 (스케줄이 없는 것은 정상 상황)
+                        }
+                    } catch (MessagingException e) {
+                        log.error("사용자 {} ({})에게 상위 우선순위 스케줄 알림 이메일 발송 실패: {}", user.getId(), user.getName(), e.getMessage());
+                        batchFailureCount++;
+                    } catch (Exception e) {
+                        log.error("사용자 {} ({})에게 상위 우선순위 스케줄 알림 중 예상치 못한 오류 발생: {}", user.getId(), user.getName(), e.getMessage());
+                        batchFailureCount++;
+                    }
+                }
+
+                totalSuccessCount += batchSuccessCount;
+                totalFailureCount += batchFailureCount;
+                
+                logBatchStatistics(batchNumber + 1, users.size(), batchSuccessCount, batchFailureCount, totalUsers);
+
+                // 마지막 배치가 아니면 지연 시간 추가
+                if (batchNumber < totalBatches - 1) {
+                    waitBetweenBatches();
+                }
+
+            } catch (Exception e) {
+                log.error("배치 {} 처리 중 치명적 오류 발생: {}", batchNumber + 1, e.getMessage());
+                totalFailureCount += BATCH_SIZE; // 배치 전체를 실패로 처리
+            }
+        }
+        
+        log.info("상위 우선순위 스케줄 알림 배치 작업 완료 - 총 성공: {}, 총 실패: {}, 총 사용자: {}", 
+                totalSuccessCount, totalFailureCount, totalUsers);
+    }
+
+    /**
+     * getCategoryScheduleAggregation과 동일한 알고리즘으로 상위 우선순위 스케줄 조회
+     */
+    public List<ScheduleListDto> getTopPrioritySchedulesWithWeights(String userId, User user, int limit) {
+        // MongoDB Aggregation Pipeline - getCategoryScheduleAggregation과 동일한 가중치 계산 로직
+        List<Document> pipeline = Arrays.asList(
+            // Stage 1: 사용자의 활성 스케줄 필터링 (오늘부터 7일 이내)
+            new Document("$match", new Document()
+                .append("$and", Arrays.asList(
+                    new Document("startAt", new Document("$gte", LocalDateTime.now())),
+                    new Document("startAt", new Document("$lte", LocalDateTime.now().plusDays(7))),
+                    new Document("userId", new ObjectId(userId)),
+                    new Document("$or", Arrays.asList(
+                        new Document("status", "active"),
+                        new Document("status", "completed")
+                    ))
+                ))),
+            
+            // Stage 2: 원본 카테고리 보존 및 카테고리 unwind
+            new Document("$addFields", new Document()
+                .append("originalCategories", "$categories")),
+            new Document("$unwind", new Document()
+                .append("path", "$categories")
+                .append("preserveNullAndEmptyArrays", true)),
+            
+            // Stage 3: 긴급도 및 카테고리 가중치 계산 (getCategoryScheduleAggregation과 동일)
+            new Document("$addFields", new Document()
+                .append("urgencyScore", createUrgencyScoreExpression())
+                .append("categoryWeight", createCategoryWeightExpression(user))),
+            
+            // Stage 4: 최종 우선순위 계산
+            new Document("$addFields", new Document()
+                .append("priority", new Document("$multiply", Arrays.asList("$urgencyScore", "$categoryWeight")))),
+            
+            // Stage 5: 카테고리별로 그룹화하여 최고 우선순위만 유지 (중복 제거)
+            new Document("$group", new Document()
+                .append("_id", "$_id")
+                .append("title", new Document("$first", "$title"))
+                .append("startAt", new Document("$first", "$startAt"))
+                .append("endAt", new Document("$first", "$endAt"))
+                .append("status", new Document("$first", "$status"))
+                .append("originalCategories", new Document("$first", "$originalCategories"))
+                .append("maxPriority", new Document("$max", "$priority"))),
+            
+            // Stage 6: 우선순위 높은 순으로 정렬
+            new Document("$sort", new Document("maxPriority", -1)),
+            
+            // Stage 7: 상위 limit개만 선택
+            new Document("$limit", limit),
+            
+            // Stage 8: 필요한 필드만 투영
+            new Document("$project", new Document()
+                .append("_id", new Document("$toString", "$_id"))
+                .append("title", "$title")
+                .append("startAt", "$startAt")
+                .append("endAt", "$endAt")
+                .append("status", "$status")
+                .append("originalCategories", "$originalCategories")
+                .append("priority", "$maxPriority"))
+        );
+
+        List<Document> results = new ArrayList<>();
+        mongoTemplate.getCollection("schedules")
+                .aggregate(pipeline, Document.class)
+                .into(results);
+        
+        return results.stream()
+                .map(doc -> {
+                    List<String> categories = doc.getList("originalCategories", String.class);
+                    return createScheduleListDto(doc, categories);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 배치 처리를 위한 헬퍼 메서드들
+     */
+    
+    /**
+     * 전체 사용자 수 조회
+     */
+    private long getTotalUserCount() {
+        return userService.count();
+    }
+    
+    /**
+     * 페이지네이션으로 사용자 조회
+     */
+    private Page<User> getUsersInBatch(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return userService.findAll(pageable);
+    }
+    
+    /**
+     * 배치 처리 간 지연
+     */
+    private void waitBetweenBatches() {
+        try {
+            Thread.sleep(BATCH_DELAY_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("배치 처리 지연 중 인터럽트 발생: {}", e.getMessage());
+        }
+    }
+    
+    /**
+     * 배치별 통계 정보
+     */
+    private void logBatchStatistics(int batchNumber, int batchSize, int successCount, int failureCount, long totalUsers) {
+        log.info("배치 {}/{} 처리 완료 - 성공: {}, 실패: {}, 배치 크기: {}", 
+                batchNumber, 
+                (int) Math.ceil((double) totalUsers / BATCH_SIZE), 
+                successCount, 
+                failureCount, 
+                batchSize);
+    }
 }
+
+
