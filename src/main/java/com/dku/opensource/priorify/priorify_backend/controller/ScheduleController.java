@@ -37,9 +37,9 @@ public class ScheduleController {
             @RequestParam(defaultValue = "7") int days
     ) {
         String userId = (String) request.getAttribute("userId");
-        if (googleAccessToken != null) {
-            googleAPIService.syncGoogleCalendar(userId, googleAccessToken);
-        }
+        // if (googleAccessToken != null) {
+        //     googleAPIService.syncGoogleCalendar(userId, googleAccessToken);
+        // }
         ScheduleGraphResponseDto graph = scheduleService.getScheduleGraph(userId, days);
         return ResponseEntity.ok(graph);
     }
